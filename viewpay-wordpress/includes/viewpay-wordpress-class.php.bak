@@ -10,11 +10,6 @@ class ViewPay_WordPress {
     private $options;
     
     /**
-     * Integration instances
-     */
-    private $integrations = array();
-    
-    /**
      * Initialise le plugin
      */
     public function init() {
@@ -36,13 +31,11 @@ class ViewPay_WordPress {
      * Configure l'intégration avec le plugin de paywall actif
      */
     private function setup_paywall_integration() {
-        // Integration files directory
-        $integration_dir = VIEWPAY_WORDPRESS_PLUGIN_DIR . 'includes/integrations/';
-        
         // Paid Memberships Pro
         if (function_exists('pmpro_has_membership_access')) {
-            require_once $integration_dir . 'class-viewpay-pmpro-integration.php';
-            $this->integrations['pmpro'] = new ViewPay_PMPro_Integration($this);
+            add_filter('pmpro_non_member_text_filter', array($this, 'add_viewpay_button'), 10, 2);
+            add_filter('pmpro_not_logged_in_text_filter', array($this, 'add_viewpay_button'), 10, 2);
+            add_filter('pmpro_has_membership_access_filter', array($this, 'check_viewpay_access'), 10, 4);
         }
         
         // Simple Membership (SWPM)
@@ -68,22 +61,52 @@ class ViewPay_WordPress {
             add_filter('um_access_restrict_non_member_message', array($this, 'add_viewpay_button_simple'), 10, 1);
             add_filter('um_access_skip_restriction_check', array($this, 'check_viewpay_access_um'), 10, 3);
         }
-        
-        // Restrict Content Pro (RCP)
-        if (class_exists('RCP_Member') || class_exists('RCP_Requirements_Check')) {
-            require_once $integration_dir . 'class-viewpay-rcp-integration.php';
-            $this->integrations['rcp'] = new ViewPay_RCP_Integration($this);
-        }
     }
     
     /**
-     * Get an option value
+     * Ajoute le bouton ViewPay au message de restriction pour PMPro
      */
-    public function get_option($key) {
-        if (isset($this->options[$key])) {
-            return $this->options[$key];
+    public function add_viewpay_button($text, $level_id = 0) {
+        global $post;
+        
+        if (!$post) {
+            return $text;
         }
-        return null;
+        
+        // Générer un nonce pour la sécurité
+        $nonce = wp_create_nonce('viewpay_nonce');
+        
+        // Chercher les boutons existants dans le message
+        $button_regex = '/<a\s+class="(.*?)"\s+href="(.*?)">(.*?)<\/a>/i';
+        
+        if (preg_match($button_regex, $text, $matches)) {
+            // Créer le bouton avec la classe pmpro_btn pour adopter le style de PMPro
+            $viewpay_button = '<button id="viewpay-button" class="viewpay-button pmpro_btn" data-post-id="' . esc_attr($post->ID) . '" data-nonce="' . esc_attr($nonce) . '" style="display:none;">';
+            $viewpay_button .= esc_html($this->options['button_text']);
+            $viewpay_button .= '</button>';
+            
+            // Déterminer le texte "OU" en fonction de la langue du site
+            $or_text = $this->get_or_text();
+            
+            // Insérer le bouton ViewPay après le bouton existant avec le séparateur "OU"
+            $original_button = $matches[0];
+            $replacement = $original_button . ' <span class="viewpay-separator" style="display:none;">' . $or_text . '</span> ' . $viewpay_button;
+            
+            // Remplacer le bouton original par notre nouvelle structure
+            $text = str_replace($original_button, $replacement, $text);
+            
+            return $text;
+        } else {
+            // Aucun bouton trouvé, on ajoute simplement notre bouton
+            $button = '<div class="viewpay-container">';
+            $button .= '<button id="viewpay-button" class="viewpay-button pmpro_btn" data-post-id="' . esc_attr($post->ID) . '" data-nonce="' . esc_attr($nonce) . '" style="display:none;">';
+            $button .= esc_html($this->options['button_text']);
+            $button .= '</button>';
+            $button .= '</div>';
+            
+            // Ajouter le bouton après le message de restriction
+            return $text . $button;
+        }
     }
     
     /**
@@ -104,7 +127,7 @@ class ViewPay_WordPress {
         
         if (preg_match($button_regex, $text, $matches)) {
             // Créer le bouton ViewPay
-            $viewpay_button = '<button id="viewpay-button" class="viewpay-button" data-post-id="' . esc_attr($post->ID) . '" data-nonce="' . esc_attr($nonce) . '">';
+            $viewpay_button = '<button id="viewpay-button" class="viewpay-button" data-post-id="' . esc_attr($post->ID) . '" data-nonce="' . esc_attr($nonce) . '" style="display:none;">';
             $viewpay_button .= esc_html($this->options['button_text']);
             $viewpay_button .= '</button>';
             
@@ -113,7 +136,7 @@ class ViewPay_WordPress {
             
             // Insérer le bouton ViewPay après le bouton existant avec le séparateur "OU"
             $original_button = $matches[0];
-            $replacement = $original_button . ' <span class="viewpay-separator">' . $or_text . '</span> ' . $viewpay_button;
+            $replacement = $original_button . ' <span class="viewpay-separator" style="display:none;">' . $or_text . '</span> ' . $viewpay_button;
             
             // Remplacer le bouton original par notre nouvelle structure
             $text = str_replace($original_button, $replacement, $text);
@@ -122,7 +145,7 @@ class ViewPay_WordPress {
         } else {
             // Aucun bouton trouvé, on ajoute simplement notre bouton
             $button = '<div class="viewpay-container">';
-            $button .= '<button id="viewpay-button" class="viewpay-button" data-post-id="' . esc_attr($post->ID) . '" data-nonce="' . esc_attr($nonce) . '">';
+            $button .= '<button id="viewpay-button" class="viewpay-button" data-post-id="' . esc_attr($post->ID) . '" data-nonce="' . esc_attr($nonce) . '" style="display:none;">';
             $button .= esc_html($this->options['button_text']);
             $button .= '</button>';
             $button .= '</div>';
@@ -130,6 +153,19 @@ class ViewPay_WordPress {
             // Ajouter le bouton après le message de restriction
             return $text . $button;
         }
+    }
+    
+    /**
+     * Vérifie si l'utilisateur a déverrouillé le contenu via ViewPay (pour PMPro)
+     */
+    public function check_viewpay_access($hasaccess, $mypost, $myuser, $post_membership_levels) {
+        // Si l'utilisateur a déjà accès, on ne fait rien
+        if ($hasaccess) {
+            return $hasaccess;
+        }
+        
+        // Vérifier si le contenu est déverrouillé via ViewPay
+        return $this->is_post_unlocked($mypost->ID);
     }
     
     /**
@@ -187,30 +223,19 @@ class ViewPay_WordPress {
     /**
      * Vérifie si un article a été déverrouillé via ViewPay
      */
-    public function is_post_unlocked($post_id) {
-        // Convert to integer for consistent comparison
-        $post_id = (int)$post_id;
-        
-        // Check URL parameter for direct unlocking (useful for testing)
-        if (isset($_GET['viewpay_unlocked'])) {
-            error_log('ViewPay: Post ' . $post_id . ' unlocked via URL parameter');
-            return true;
-        }
-        
-        // Check via cookies
+    private function is_post_unlocked($post_id) {
+        // Vérifier via les cookies
         if (isset($_COOKIE['viewpay_unlocked_posts']) && !empty($_COOKIE['viewpay_unlocked_posts'])) {
             $cookie_value = stripslashes($_COOKIE['viewpay_unlocked_posts']);
-            error_log('ViewPay: Checking cookie value: ' . $cookie_value . ' for post ' . $post_id);
             
             try {
                 $unlocked_posts = json_decode($cookie_value, true);
                 
                 if (is_array($unlocked_posts) && in_array($post_id, $unlocked_posts)) {
-                    error_log('ViewPay: Content unlocked for post ' . $post_id);
                     return true;
                 }
             } catch (Exception $e) {
-                error_log('ViewPay: Error decoding cookie: ' . $e->getMessage());
+                error_log('ViewPay: Erreur lors du décodage du cookie: ' . $e->getMessage());
             }
         }
         
@@ -220,7 +245,7 @@ class ViewPay_WordPress {
     /**
      * Obtient la traduction de "OU" en fonction de la langue du site
      */
-    public function get_or_text() {
+    private function get_or_text() {
         // Liste des traductions de "OU" dans différentes langues
         $translations = array(
             'fr_FR' => 'OU',
@@ -264,6 +289,22 @@ class ViewPay_WordPress {
             'adErrorText' => __('Erreur lors du chargement de la publicité. Veuillez réessayer.', 'viewpay-wordpress')
         ));
         
+        // Ajouter des styles dynamiques en fonction des options
+        //$button_color = isset($this->options['button_color']) ? esc_attr($this->options['button_color']) : '#0073aa';
+        //$button_hover_color = $this->adjust_brightness($button_color, -20); // Assombrir pour le hover
+        
+        // Ajouter uniquement les styles dynamiques dépendant des options utilisateur
+        /*$custom_css = "
+            .viewpay-button {
+                background-color: {$button_color} !important;
+            }
+            .viewpay-button:hover {
+                background-color: {$button_hover_color} !important;
+            }
+";*/
+        
+        // Ajouter le style inline
+        wp_add_inline_style('viewpay-styles', $custom_css);
     }
     
     /**
@@ -278,7 +319,7 @@ class ViewPay_WordPress {
         
         $post_id = intval($_POST['post_id']);
         
-        // Create/update the cookie
+        // Créer/mettre à jour le cookie
         $cookie_posts = array();
         if (isset($_COOKIE['viewpay_unlocked_posts']) && !empty($_COOKIE['viewpay_unlocked_posts'])) {
             $cookie_data = stripslashes($_COOKIE['viewpay_unlocked_posts']);
@@ -289,7 +330,7 @@ class ViewPay_WordPress {
                     $cookie_posts = $decoded;
                 }
             } catch (Exception $e) {
-                error_log('ViewPay: Error decoding JSON: ' . $e->getMessage());
+                error_log('ViewPay: Erreur lors du décodage JSON: ' . $e->getMessage());
             }
         }
         
@@ -297,21 +338,15 @@ class ViewPay_WordPress {
             $cookie_posts[] = $post_id;
         }
         
-        // Set cookie with more robust parameters
+        // Définir un cookie avec un temps d'expiration de 24 heures
         $cookie_value = json_encode($cookie_posts);
-        $secure = is_ssl();
-        $http_only = true; // Prevent JavaScript access
+        setcookie('viewpay_unlocked_posts', $cookie_value, time() + 86400, '/');
+        $_COOKIE['viewpay_unlocked_posts'] = $cookie_value; // Mettre à jour la variable $_COOKIE immédiatement
         
-        // Log cookie setting
-        error_log('ViewPay Debug: Setting cookie with value: ' . $cookie_value);
-        
-        setcookie('viewpay_unlocked_posts', $cookie_value, time() + 86400, '/', '', $secure, $http_only);
-        $_COOKIE['viewpay_unlocked_posts'] = $cookie_value; // Update $_COOKIE variable immediately
-        
-        // Send success response with force reload parameter
+        // Envoyer une réponse de succès
         wp_send_json_success(array(
             'message' => __('Contenu déverrouillé avec succès!', 'viewpay-wordpress'),
-            'redirect' => get_permalink($post_id) . '?viewpay_unlocked=' . time(), // Force cache bypass
+            'redirect' => get_permalink($post_id),
             'cookie_set' => true,
             'post_id' => $post_id
         ));
