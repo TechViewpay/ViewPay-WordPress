@@ -1,0 +1,207 @@
+/**
+ * Styles pour la page d'accueil de ViewPay
+ */
+
+.viewpay-welcome-page {
+    max-width: 1200px;
+    margin: 20px 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+}
+
+/* En-tête */
+.viewpay-welcome-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.viewpay-logo {
+    margin-right: 30px;
+    flex-shrink: 0;
+}
+
+.viewpay-logo img {
+    max-width: 200px;
+    height: auto;
+}
+
+.viewpay-header-text h2 {
+    margin-top: 0;
+    color: #23282d;
+    font-size: 24px;
+    font-weight: 500;
+}
+
+.viewpay-description {
+    font-size: 16px;
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 0;
+}
+
+/* Contenu */
+.viewpay-welcome-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.viewpay-card {
+    background: #fff;
+    border-radius: 5px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.viewpay-card h3 {
+    margin-top: 0;
+    color: #23282d;
+    font-size: 18px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.viewpay-site-id-card {
+    grid-column: span 2;
+}
+
+.viewpay-form-field {
+    margin-bottom: 15px;
+}
+
+.viewpay-form-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.viewpay-form-field input[type="text"] {
+    width: 100%;
+    max-width: 400px;
+}
+
+.viewpay-actions {
+    margin-top: 20px;
+}
+
+/* Liste des plugins */
+.viewpay-plugins-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.viewpay-plugins-list li {
+    display: flex;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.viewpay-plugins-list li:last-child {
+    border-bottom: none;
+}
+
+.viewpay-plugins-list .dashicons {
+    margin-right: 10px;
+    color: #2271b1;
+}
+
+.viewpay-plugins-list strong {
+    flex-grow: 1;
+}
+
+.viewpay-status {
+    background: #f0f0f0;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    color: #666;
+}
+
+.viewpay-status.viewpay-active {
+    background: #dff0d8;
+    color: #3c763d;
+}
+
+/* Étapes du processus */
+.viewpay-process {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-top: 20px;
+    gap: 15px;
+}
+
+.viewpay-process-step {
+    flex: 1;
+    min-width: 100px;
+    text-align: center;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 5px;
+}
+
+.viewpay-process-step .dashicons {
+    font-size: 30px;
+    width: 30px;
+    height: 30px;
+    display: block;
+    margin: 0 auto 10px;
+}
+
+.viewpay-process-step:nth-child(1) .dashicons {
+    color: #dc3232;
+}
+
+.viewpay-process-step:nth-child(2) .dashicons {
+    color: #2271b1;
+}
+
+.viewpay-process-step:nth-child(3) .dashicons {
+    color: #46b450;
+}
+
+.viewpay-process-step p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Responsive */
+@media screen and (max-width: 782px) {
+    .viewpay-welcome-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .viewpay-logo {
+        margin-right: 0;
+        margin-bottom: 20px;
+    }
+    
+    .viewpay-site-id-card {
+        grid-column: span 1;
+    }
+}
+
+/* Style pour le color picker désactivé */
+.viewpay-picker-disabled {
+    position: relative;
+}
+
+.viewpay-picker-disabled::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.5);
+    z-index: 1;
+    cursor: not-allowed;
+}

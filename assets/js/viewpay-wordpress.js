@@ -1,17 +1,26 @@
 (function($) {
     'use strict';
     
-    // Fonctions utilitaires pour gérer les cookies
-    function setCookie(name, value, days) {
-        var expires = "";
-        if (days) {
-            var date = new Date();
-            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-            expires = "; expires=" + date.toUTCString();
+    // Helper function for debug logging
+    function debugLog(message) {
+        if (typeof viewpayVars !== 'undefined' && viewpayVars.debugEnabled) {
+            console.log('ViewPay Debug: ' + message);
         }
-        document.cookie = name + "=" + (value || "") + expires + "; path=/";
     }
     
+    // Fonctions utilitaires pour gérer les cookies avec durée personnalisée
+    function setCookie(name, value, minutes) {
+        var expires = "";
+        if (minutes) {
+            var date = new Date();
+            date.setTime(date.getTime() + (minutes * 60 * 1000)); // Convertir minutes en millisecondes
+            expires = "; expires=" + date.toUTCString();
+            debugLog('Cookie côté client défini pour ' + minutes + ' minutes. Expiration: ' + date.toISOString());
+        }
+        document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        debugLog('Cookie défini pour ' + minutes + ' minutes');
+    }  
+ 
     function getCookie(name) {
         var nameEQ = name + "=";
         var ca = document.cookie.split(';');
@@ -24,8 +33,8 @@
             }
         }
         return null;
-    }
-    
+    }   
+
     // Déclaration des éléments DOM de ViewPay en dehors des fonctions
     var divVPmodal, divCadreJokerlyADS;
     
@@ -51,16 +60,28 @@
     
     function VPexistAds(){
         // Publicité disponible, on affiche le bouton ViewPay et le séparateur
-        $('#viewpay-button').show();
-        $('.viewpay-separator').show();
-        console.log('ViewPay: Publicité disponible, affichage du bouton et du séparateur');
+        //$('#viewpay-button').show();
+        //$('.viewpay-separator').show();
+        $('#viewpay-button').css('display', 'inline').attr('style', 'display: inline !important');
+	$('.viewpay-separator').css('display', 'inline').attr('style', 'display: inline !important');
+	debugLog('Publicité disponible, affichage du bouton et du séparateur');
+
+	// Spécifique pour Pyrenees Magazine - afficher l'option ViewPay complète
+        $('body').addClass('viewpay-ads-available');
+        $('.option--viewpay').css('display', 'block').attr('style', 'display: block !important');
+        $('.viewpay-separator-pymag').css('display', 'block').attr('style', 'display: block !important');
+
     }
     
     function VPnoAds(){
         // Aucune publicité disponible, on masque le bouton ViewPay et le séparateur
         $('#viewpay-button').hide();
         $('.viewpay-separator').hide();
-        console.log('ViewPay: Aucune publicité disponible, masquage du bouton et du séparateur');
+        debugLog('Aucune publicité disponible, masquage du bouton et du séparateur');
+	// Spécifique pour Pyrenees Magazine - masquer l'option ViewPay complète
+        $('body').removeClass('viewpay-ads-available');
+        $('.option--viewpay').hide();
+        $('.viewpay-separator-pymag').hide();
     }
     
     function VPloadAds(){
@@ -77,7 +98,7 @@
             console.error('ViewPay: L\'élément modal n\'existe pas');
         }
     }
-    
+  
     function VPcompleteAds(){
         // L'utilisateur a terminé le parcours ViewPay
         var modal = document.getElementById("VPmodal");
@@ -101,8 +122,10 @@
             },
             success: function(response) {
                 if (response.success) {
-                    // Définir également un cookie local pour assurer la persistance
-                    if (response.data.post_id) {
+                    debugLog('Contenu déverrouillé avec succès. Durée: ' + (response.data.duration_minutes || 'inconnue') + ' minutes');
+                    
+                    // Définir également un cookie local pour assurer la persistance avec la durée configurée
+                    if (response.data.post_id && response.data.duration_minutes) {
                         try {
                             // Tenter de définir un cookie supplémentaire côté client
                             var existingCookie = getCookie('viewpay_unlocked_posts');
@@ -124,7 +147,9 @@
                                 cookieData.push(response.data.post_id);
                             }
                             
-                            setCookie('viewpay_unlocked_posts', JSON.stringify(cookieData), 1);
+                            // Utiliser la durée configurée depuis la réponse du serveur
+                            setCookie('viewpay_unlocked_posts', JSON.stringify(cookieData), response.data.duration_minutes);
+                            debugLog('Cookie client défini avec durée: ' + response.data.duration_minutes + ' minutes');
                         } catch(e) {
                             // Gestion silencieuse des erreurs
                             console.error('ViewPay: Erreur lors de la définition du cookie', e);
@@ -142,7 +167,7 @@
                 console.error('ViewPay: Erreur lors du déverrouillage du contenu', error);
             }
         });
-    }
+    } 
     
     function VPcloseAds(){
         // L'utilisateur a fermé le parcours ViewPay
@@ -155,13 +180,13 @@
     
     function VPplayAds(){
         // Notification lorsque l'utilisateur démarre la vidéo
-        console.log('ViewPay: Lecture de la publicité démarrée');
+        debugLog('Lecture de la publicité démarrée');
     }
     
     function initViewPayElements() {
         // Vérifier si les éléments existent déjà
         if (document.getElementById('VPmodal')) {
-            console.log('ViewPay: Les éléments DOM existent déjà');
+            debugLog('Les éléments DOM existent déjà');
             return;
         }
         
@@ -198,7 +223,7 @@
     }
     
     $(document).ready(function() {
-        console.log('ViewPay: Initialisation du plugin');
+        debugLog('Initialisation du plugin');
         
         // Masquer le bouton et le séparateur par défaut jusqu'à ce qu'on sache si des publicités sont disponibles
         // Note: maintenant géré via CSS inline dans les templates HTML
@@ -209,7 +234,7 @@
         // Gérer le clic sur le bouton de déverrouillage
         $(document).on('click', '#viewpay-button', function(e) {
             e.preventDefault();
-            console.log('ViewPay: Bouton cliqué');
+            debugLog('Bouton cliqué');
             // Charger la publicité ViewPay
             VPloadAds();
         });

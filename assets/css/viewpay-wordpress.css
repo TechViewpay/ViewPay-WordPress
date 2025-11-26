@@ -26,9 +26,12 @@
     background-repeat: no-repeat;
     padding-left: max(50px,10%) !important;
 }
+.viewpay-separator {
+	display: inline-block !important;
+}
 
 /* Fix spécifique pour les boutons de PMPro qui pourraient avoir des styles contraignants */
-.pmpro_btn, 
+/*.pmpro_btn, 
 a.pmpro_btn, 
 .entry-content a.pmpro_btn, 
 .pmpro_content_message a, 
@@ -38,6 +41,7 @@ a.pmpro_btn,
     clear: none !important;
     vertical-align: middle !important;
 }
+*/
 
 /* Sur mobile uniquement, permettre le retour à la ligne */
 @media screen and (max-width: 600px) {
@@ -116,4 +120,9 @@ body #VPmodal.viewpay-visible {
     display: block;
     text-align: center;
     margin: 15px 0;
+}
+
+/* ALWAYS HIDE VIEWPAY SEPARATOR AND BUTTON BEFORE VIEWPAY INITIALIZATION */
+.viewpay-button, .viewpay-separator {
+	display:none !important;
 }
