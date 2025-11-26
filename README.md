@@ -1,5 +1,7 @@
 # ViewPay WordPress
 
+**Version 1.2.4**
+
 Ce plugin intègre la solution ViewPay dans les principaux plugins de paywall WordPress, permettant aux visiteurs de débloquer du contenu premium en regardant une publicité.
 
 ## Description
@@ -8,8 +10,13 @@ ViewPay WordPress est un plugin qui s'intègre avec les principaux systèmes de 
 
 ### Plugins de paywall compatibles
 
-- Paid Memberships Pro
+- Paid Memberships Pro (PMPro)
+- Restrict Content Pro (RCP)
 - Simple Membership (SWPM)
+- PyMag (solution custom Pyrénées Magazine)
+
+### Plugins envisagés pour les versions futures
+
 - WP-Members
 - Restrict User Access (RUA)
 - Ultimate Member (UM)
@@ -24,7 +31,10 @@ ViewPay WordPress est un plugin qui s'intègre avec les principaux systèmes de 
 
 1. **ID de site ViewPay** : Entrez votre identifiant de site fourni par ViewPay. Par défaut, un ID de démonstration est utilisé.
 2. **Texte du bouton** : Personnalisez le texte du bouton qui permettra aux utilisateurs de débloquer le contenu.
-3. **Couleur du bouton** : Choisissez une couleur qui s'intègre bien à votre thème.
+3. **Durée d'accès après publicité** : Définissez la durée pendant laquelle l'utilisateur aura accès au contenu après avoir regardé une publicité (de 5 minutes à 24 heures). Recommandation : 15 minutes.
+4. **Personnaliser la couleur** : Activez cette option pour définir une couleur personnalisée pour le bouton (par défaut, le bouton adopte le style du plugin de paywall).
+5. **Couleur du bouton** : Si la personnalisation est activée, choisissez une couleur qui s'intègre bien à votre thème.
+6. **Logs de débogage** : Active l'affichage des messages de débogage dans la console JavaScript (à désactiver en production).
 
 ## Fonctionnement
 
@@ -32,7 +42,7 @@ ViewPay WordPress est un plugin qui s'intègre avec les principaux systèmes de 
 2. Lorsqu'un visiteur rencontre du contenu restreint, un bouton "Débloquer en regardant une publicité" (ou votre texte personnalisé) s'affiche.
 3. En cliquant sur ce bouton, une publicité ViewPay s'affiche dans une fenêtre modale.
 4. Après avoir regardé la publicité complète, le contenu est débloqué pour l'utilisateur.
-5. L'accès au contenu débloqué persiste pendant 24 heures grâce à un cookie côté client.
+5. L'accès au contenu débloqué persiste pendant la durée configurée (par défaut 15 minutes) grâce à un cookie côté client.
 
 ## Personnalisation avancée
 
@@ -52,7 +62,7 @@ Vous pouvez modifier la couleur du bouton dans les paramètres du plugin. Pour d
 
 ### Est-ce que le contenu reste débloqué indéfiniment ?
 
-Non, l'accès au contenu débloqué est temporaire et dure 24 heures. Après cette période, l'utilisateur devra regarder une nouvelle publicité pour accéder au contenu à nouveau.
+Non, l'accès au contenu débloqué est temporaire et dure le temps configuré dans les paramètres (de 5 minutes à 24 heures, 15 minutes par défaut). Après cette période, l'utilisateur devra regarder une nouvelle publicité pour accéder au contenu à nouveau.
 
 ## Support
 
