@@ -1,6 +1,6 @@
 # ViewPay WordPress
 
-**Version 1.2.4**
+**Version 1.3.1**
 
 Ce plugin intègre la solution ViewPay dans les principaux plugins de paywall WordPress, permettant aux visiteurs de débloquer du contenu premium en regardant une publicité.
 
