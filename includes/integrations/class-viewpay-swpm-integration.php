@@ -147,43 +147,71 @@ class ViewPay_SWPM_Integration {
      */
     public function ensure_content_access($content) {
         global $post;
-        
+
         if (!$post) {
             return $content;
         }
-        
+
         // Only proceed if this post is unlocked via ViewPay
         if ($this->main->is_post_unlocked($post->ID)) {
             // Add debug log to trace execution
             error_log('ViewPay: Checking content for SWPM post ' . $post->ID);
-            
+
             // Check if the content appears to be restricted by SWPM
-            if (strpos($content, 'swpm-protected-content') !== false || 
+            if (strpos($content, 'swpm-protected-content') !== false ||
                 strpos($content, 'swpm_protected_message') !== false) {
-                
+
                 error_log('ViewPay: Force SWPM content display for post ' . $post->ID);
-                
+
                 // Get the original post content
                 $original_content = get_post_field('post_content', $post->ID);
-                
+
                 // Apply standard content filters except SWPM's
                 remove_filter('the_content', array('SwpmProtectContent', 'filter_content'), 20);
                 if (class_exists('SwpmPermission')) {
                     remove_filter('the_content', array('SwpmPermission', 'check_permission'), 20);
                 }
-                
+
                 $filtered_content = apply_filters('the_content', $original_content);
-                
+
                 // Restore the filters
                 add_filter('the_content', array('SwpmProtectContent', 'filter_content'), 20);
                 if (class_exists('SwpmPermission')) {
                     add_filter('the_content', array('SwpmPermission', 'check_permission'), 20);
                 }
-                
-                return $filtered_content;
+
+                // Add unlock notice if enabled
+                $notice = $this->get_unlock_notice();
+
+                return $notice . $filtered_content;
             }
         }
-        
+
         return $content;
+    }
+
+    /**
+     * Get the unlock notice HTML if enabled
+     *
+     * @return string The notice HTML or empty string
+     */
+    private function get_unlock_notice() {
+        $message_enabled = $this->main->get_option('unlock_message_enabled');
+        if ($message_enabled !== 'yes') {
+            return '';
+        }
+
+        $message_text = $this->main->get_option('unlock_message_text');
+        $message_timer = intval($this->main->get_option('unlock_message_timer'));
+
+        if (empty($message_text)) {
+            $message_text = __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress');
+        }
+
+        $notice = '<div class="viewpay-unlock-notice" data-timer="' . esc_attr($message_timer) . '" style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; text-align: center; transition: opacity 0.5s ease-out;">';
+        $notice .= '<p style="margin: 0;"><em>' . esc_html($message_text) . '</em></p>';
+        $notice .= '</div>';
+
+        return $notice;
     }
 }

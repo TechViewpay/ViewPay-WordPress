@@ -217,13 +217,23 @@ class ViewPay_Custom_Integration {
                 return $classes;
             });
 
-            // Add unlock notice
-            $unlock_notice = '<div class="viewpay-unlock-notice">';
-            $unlock_notice .= '<p><em>' . __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress') . '</em></p>';
-            $unlock_notice .= '</div>';
+            // Add unlock notice if enabled
+            $message_enabled = $this->main->get_option('unlock_message_enabled');
+            if ($message_enabled === 'yes') {
+                $message_text = $this->main->get_option('unlock_message_text');
+                $message_timer = intval($this->main->get_option('unlock_message_timer'));
 
-            // Prepend the notice
-            $content = $unlock_notice . $content;
+                if (empty($message_text)) {
+                    $message_text = __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress');
+                }
+
+                $unlock_notice = '<div class="viewpay-unlock-notice" data-timer="' . esc_attr($message_timer) . '">';
+                $unlock_notice .= '<p><em>' . esc_html($message_text) . '</em></p>';
+                $unlock_notice .= '</div>';
+
+                // Prepend the notice
+                $content = $unlock_notice . $content;
+            }
         }
 
         return $content;

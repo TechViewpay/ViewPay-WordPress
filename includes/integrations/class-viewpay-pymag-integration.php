@@ -305,13 +305,23 @@ class ViewPay_PyMag_Integration {
             
             // Remove the premium-content-cta div entirely
             $content = preg_replace('/<div class="premium-content-cta">.*?<\/div>/s', '', $content);
-            
-            // Add a small notice that content was unlocked via ViewPay
-            $unlock_notice = '<div class="viewpay-unlock-notice">';
-            $unlock_notice .= '<p><em>' . __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress') . '</em></p>';
-            $unlock_notice .= '</div>';
-            
-            $content .= $unlock_notice;
+
+            // Add unlock notice if enabled
+            $message_enabled = $this->main->get_option('unlock_message_enabled');
+            if ($message_enabled === 'yes') {
+                $message_text = $this->main->get_option('unlock_message_text');
+                $message_timer = intval($this->main->get_option('unlock_message_timer'));
+
+                if (empty($message_text)) {
+                    $message_text = __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress');
+                }
+
+                $unlock_notice = '<div class="viewpay-unlock-notice" data-timer="' . esc_attr($message_timer) . '">';
+                $unlock_notice .= '<p><em>' . esc_html($message_text) . '</em></p>';
+                $unlock_notice .= '</div>';
+
+                $content .= $unlock_notice;
+            }
         }
         
         return $content;

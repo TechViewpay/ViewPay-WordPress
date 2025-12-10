@@ -33,9 +33,21 @@ class ViewPay_PMS_Integration {
     }
 
     /**
+     * Check if debug mode is enabled
+     *
+     * @return bool True if debug logs are enabled
+     */
+    private function is_debug_enabled() {
+        return $this->main->get_option('enable_debug_logs') === 'yes';
+    }
+
+    /**
      * Initialize the integration
      */
     public function init() {
+        // Very early hook - before anything else
+        add_action('init', array($this, 'early_viewpay_check'), 1);
+
         // Hook into PMS restriction message filter
         add_filter('pms_restriction_message', array($this, 'add_viewpay_button'), 10, 2);
 
@@ -48,12 +60,57 @@ class ViewPay_PMS_Integration {
         // Hook into member access check
         add_filter('pms_member_is_member', array($this, 'override_member_check'), 10, 3);
 
+        // Hook into PMS block render to bypass restriction
+        add_filter('pms_block_content_restriction_start_output', array($this, 'bypass_block_restriction'), 10, 3);
+
         // Early intervention - runs before PMS filters content
         add_action('wp', array($this, 'force_pms_access'), 1);
 
         // Multiple content filters at different priorities
         add_filter('the_content', array($this, 'early_content_access'), 1);
+        add_filter('the_content', array($this, 'inject_button_in_gutenberg_blocks'), 50);
+        add_filter('the_content', array($this, 'unlock_gutenberg_blocks'), 100);
         add_filter('the_content', array($this, 'force_content_display'), 999);
+    }
+
+    /**
+     * Very early check for ViewPay unlock status
+     */
+    public function early_viewpay_check() {
+        // Log cookie status for debugging
+        if ($this->is_debug_enabled()) {
+            $has_cookie = isset($_COOKIE['viewpay_unlocked_posts']);
+            error_log('ViewPay PMS: early_viewpay_check - Cookie present: ' . ($has_cookie ? 'YES' : 'NO'));
+            if ($has_cookie) {
+                error_log('ViewPay PMS: Cookie value: ' . $_COOKIE['viewpay_unlocked_posts']);
+            }
+        }
+    }
+
+    /**
+     * Bypass PMS block restriction when unlocked via ViewPay
+     *
+     * @param string $output The block output
+     * @param string $content The inner content
+     * @param array $attributes Block attributes
+     * @return string Modified output
+     */
+    public function bypass_block_restriction($output, $content, $attributes) {
+        global $post;
+
+        if (!$post) {
+            return $output;
+        }
+
+        if ($this->main->is_post_unlocked($post->ID)) {
+            if ($this->is_debug_enabled()) {
+                error_log('ViewPay PMS: Bypassing block restriction for post ' . $post->ID);
+            }
+            // Return the original content without restriction
+            return $content;
+        }
+
+        return $output;
     }
 
     /**
@@ -130,6 +187,146 @@ class ViewPay_PMS_Integration {
      */
     public function add_viewpay_button_to_content($content, $post_id = 0) {
         return $this->add_viewpay_button($content, $post_id);
+    }
+
+    /**
+     * Inject ViewPay button in PMS Gutenberg blocks
+     *
+     * PMS uses Gutenberg blocks (wp-block-pms-content-restriction-start/end)
+     * that don't trigger the classic pms_restriction_message filter.
+     * This method handles those blocks.
+     *
+     * @param string $content The post content
+     * @return string Modified content with ViewPay button
+     */
+    public function inject_button_in_gutenberg_blocks($content) {
+        global $post;
+
+        if (!$post) {
+            return $content;
+        }
+
+        // Don't inject if user is admin or already has access
+        if (current_user_can('manage_options')) {
+            return $content;
+        }
+
+        // Don't inject if already unlocked via ViewPay
+        if ($this->main->is_post_unlocked($post->ID)) {
+            return $content;
+        }
+
+        // Check if content has PMS Gutenberg block
+        if (strpos($content, 'wp-block-pms-content-restriction-start') === false) {
+            return $content;
+        }
+
+        // Check if ViewPay button already exists
+        if (strpos($content, 'viewpay-button') !== false) {
+            return $content;
+        }
+
+        // Generate the ViewPay button HTML
+        $nonce = wp_create_nonce('viewpay_nonce');
+        $button_text = $this->main->get_option('button_text');
+        $or_text = $this->main->get_or_text();
+
+        $viewpay_html = '<div class="viewpay-pms-container" style="margin-top: 15px; text-align: center;">';
+        $viewpay_html .= '<span class="viewpay-separator" style="display: block; margin-bottom: 10px; font-weight: bold;">' . esc_html($or_text) . '</span>';
+        $viewpay_html .= '<button id="viewpay-button" class="viewpay-button" data-post-id="' . esc_attr($post->ID) . '" data-nonce="' . esc_attr($nonce) . '">';
+        $viewpay_html .= '<span class="viewpay-icon"></span>';
+        $viewpay_html .= esc_html($button_text);
+        $viewpay_html .= '</button>';
+        $viewpay_html .= '</div>';
+
+        // Inject button after the PMS restriction message div
+        // Pattern matches: <div class="wp-block-pms-content-restriction-start">...message...</div>
+        $pattern = '/(<div\s+class="wp-block-pms-content-restriction-start"[^>]*>.*?<\/div>)/is';
+        $content = preg_replace($pattern, '$1' . $viewpay_html, $content, 1);
+
+        return $content;
+    }
+
+    /**
+     * Unlock Gutenberg blocks when content is unlocked via ViewPay
+     *
+     * When user has unlocked content via ViewPay, we need to show the full content
+     * that was hidden by PMS blocks.
+     *
+     * @param string $content The post content
+     * @return string Modified content with unlocked blocks
+     */
+    public function unlock_gutenberg_blocks($content) {
+        global $post;
+
+        if (!$post) {
+            return $content;
+        }
+
+        // Only process if unlocked via ViewPay
+        if (!$this->main->is_post_unlocked($post->ID)) {
+            return $content;
+        }
+
+        // Check if content has PMS Gutenberg block restriction message
+        if (strpos($content, 'wp-block-pms-content-restriction-start') === false) {
+            return $content;
+        }
+
+        if ($this->is_debug_enabled()) {
+            error_log('ViewPay PMS: unlock_gutenberg_blocks - Attempting to unlock content for post ' . $post->ID);
+        }
+
+        // Get the raw post content and re-render without PMS restrictions
+        $raw_content = get_post_field('post_content', $post->ID);
+
+        // Remove PMS block markers from raw content
+        // Pattern: <!-- wp:pms/content-restriction-start -->...<!-- /wp:pms/content-restriction-start -->
+        // And: <!-- wp:pms/content-restriction-end /-->
+        $raw_content = preg_replace('/<!-- wp:pms\/content-restriction-start[^>]*-->.*?<!-- \/wp:pms\/content-restriction-start -->/s', '', $raw_content);
+        $raw_content = preg_replace('/<!-- wp:pms\/content-restriction-end[^>]*\/?-->/s', '', $raw_content);
+
+        // Also handle the shortcode version if present
+        $raw_content = preg_replace('/\[pms-restrict[^\]]*\]/', '', $raw_content);
+        $raw_content = preg_replace('/\[\/pms-restrict\]/', '', $raw_content);
+
+        // Temporarily remove our own filters to avoid infinite loop
+        remove_filter('the_content', array($this, 'unlock_gutenberg_blocks'), 100);
+        remove_filter('the_content', array($this, 'inject_button_in_gutenberg_blocks'), 50);
+
+        // Apply content filters (except PMS)
+        remove_filter('the_content', 'pms_filter_content', 10);
+        remove_filter('the_content', 'pms_restrict_content', 10);
+
+        $unlocked_content = apply_filters('the_content', $raw_content);
+
+        // Re-add our filters
+        add_filter('the_content', array($this, 'inject_button_in_gutenberg_blocks'), 50);
+        add_filter('the_content', array($this, 'unlock_gutenberg_blocks'), 100);
+
+        // Check if unlock message is enabled
+        $message_enabled = $this->main->get_option('unlock_message_enabled');
+        $notice = '';
+
+        if ($message_enabled === 'yes') {
+            $message_text = $this->main->get_option('unlock_message_text');
+            $message_timer = intval($this->main->get_option('unlock_message_timer'));
+
+            if (empty($message_text)) {
+                $message_text = __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress');
+            }
+
+            // Add a notice that content was unlocked via ViewPay
+            $notice = '<div class="viewpay-unlock-notice" data-timer="' . esc_attr($message_timer) . '" style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; text-align: center; transition: opacity 0.5s ease-out;">';
+            $notice .= '<p style="margin: 0;"><em>' . esc_html($message_text) . '</em></p>';
+            $notice .= '</div>';
+        }
+
+        if ($this->is_debug_enabled()) {
+            error_log('ViewPay PMS: Content unlocked successfully for post ' . $post->ID);
+        }
+
+        return $notice . $unlocked_content;
     }
 
     /**

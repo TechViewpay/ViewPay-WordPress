@@ -338,6 +338,29 @@
         }
     }
 
+    /**
+     * Handle unlock notice auto-hide timer
+     */
+    function initUnlockNoticeTimer() {
+        var $notice = $('.viewpay-unlock-notice');
+        if ($notice.length === 0) {
+            return;
+        }
+
+        var timer = parseInt($notice.data('timer'), 10);
+        if (timer > 0) {
+            debugLog('Message de déblocage configuré pour disparaître dans ' + timer + ' secondes');
+            setTimeout(function() {
+                $notice.css('opacity', '0');
+                setTimeout(function() {
+                    $notice.slideUp(300, function() {
+                        $notice.remove();
+                    });
+                }, 500);
+            }, timer * 1000);
+        }
+    }
+
     $(document).ready(function() {
         debugLog('Initialisation du plugin');
         debugLog('Paywall type: ' + viewpayVars.paywallType);
@@ -350,6 +373,9 @@
 
         // Initialize ViewPay elements
         initViewPayElements();
+
+        // Initialize unlock notice timer
+        initUnlockNoticeTimer();
 
         // Handle click on unlock button
         $(document).on('click', '#viewpay-button', function(e) {

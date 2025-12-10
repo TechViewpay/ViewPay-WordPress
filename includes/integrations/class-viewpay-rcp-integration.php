@@ -165,30 +165,33 @@ class ViewPay_RCP_Integration {
      */
     public function force_content_display($content) {
         global $post;
-        
+
         if (!$post) {
             return $content;
         }
-        
+
         if ($this->main->is_post_unlocked($post->ID)) {
             // Check if content has already been restricted
-            if (strpos($content, 'class="restrict-content-message"') !== false || 
+            if (strpos($content, 'class="restrict-content-message"') !== false ||
                 strpos($content, 'rcp-restricted-content') !== false) {
-                
+
                 error_log('ViewPay: Force content display for post ' . $post->ID);
-                
+
                 // Get the original post content
                 $original_content = get_post_field('post_content', $post->ID);
                 $original_content = apply_filters('the_content', $original_content);
-                
+
+                // Add unlock notice if enabled
+                $notice = $this->get_unlock_notice();
+
                 // Return the original content, bypassing restriction
-                return $original_content;
+                return $notice . $original_content;
             }
         }
-        
+
         return $content;
     }
-    
+
     /**
      * User access override
      */
@@ -198,5 +201,30 @@ class ViewPay_RCP_Integration {
             return true;
         }
         return $can_access;
+    }
+
+    /**
+     * Get the unlock notice HTML if enabled
+     *
+     * @return string The notice HTML or empty string
+     */
+    private function get_unlock_notice() {
+        $message_enabled = $this->main->get_option('unlock_message_enabled');
+        if ($message_enabled !== 'yes') {
+            return '';
+        }
+
+        $message_text = $this->main->get_option('unlock_message_text');
+        $message_timer = intval($this->main->get_option('unlock_message_timer'));
+
+        if (empty($message_text)) {
+            $message_text = __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress');
+        }
+
+        $notice = '<div class="viewpay-unlock-notice" data-timer="' . esc_attr($message_timer) . '" style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; text-align: center; transition: opacity 0.5s ease-out;">';
+        $notice .= '<p style="margin: 0;"><em>' . esc_html($message_text) . '</em></p>';
+        $notice .= '</div>';
+
+        return $notice;
     }
 }

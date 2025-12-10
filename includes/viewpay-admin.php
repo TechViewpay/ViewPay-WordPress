@@ -141,6 +141,30 @@ function viewpay_wordpress_settings_init() {
         'viewpay_wordpress_appearance_section'
     );
 
+    add_settings_field(
+        'unlock_message_enabled',
+        __('Message de déblocage', 'viewpay-wordpress'),
+        'viewpay_wordpress_unlock_message_enabled_render',
+        'viewpay-wordpress',
+        'viewpay_wordpress_appearance_section'
+    );
+
+    add_settings_field(
+        'unlock_message_text',
+        __('Texte du message', 'viewpay-wordpress'),
+        'viewpay_wordpress_unlock_message_text_render',
+        'viewpay-wordpress',
+        'viewpay_wordpress_appearance_section'
+    );
+
+    add_settings_field(
+        'unlock_message_timer',
+        __('Disparition du message', 'viewpay-wordpress'),
+        'viewpay_wordpress_unlock_message_timer_render',
+        'viewpay-wordpress',
+        'viewpay_wordpress_appearance_section'
+    );
+
     // Section Avancé
     add_settings_section(
         'viewpay_wordpress_advanced_section',
@@ -392,6 +416,58 @@ function viewpay_wordpress_button_color_render() {
             <?php _e('Sélectionnez la couleur personnalisée pour le bouton ViewPay.', 'viewpay-wordpress'); ?>
         </p>
     </div>
+    <?php
+}
+
+/**
+ * Unlock message enabled checkbox render callback
+ */
+function viewpay_wordpress_unlock_message_enabled_render() {
+    $options = get_option('viewpay_wordpress_options', viewpay_wordpress_default_options());
+    $enabled = isset($options['unlock_message_enabled']) ? $options['unlock_message_enabled'] : 'yes';
+    ?>
+    <label>
+        <input type="checkbox" name="viewpay_wordpress_options[unlock_message_enabled]" value="yes" <?php checked($enabled, 'yes'); ?> />
+        <?php _e('Afficher un message de confirmation après le déblocage', 'viewpay-wordpress'); ?>
+    </label>
+    <p class="description">
+        <?php _e('Si activé, un message s\'affichera pour confirmer que le contenu a été débloqué grâce à ViewPay.', 'viewpay-wordpress'); ?>
+    </p>
+    <?php
+}
+
+/**
+ * Unlock message text render callback
+ */
+function viewpay_wordpress_unlock_message_text_render() {
+    $options = get_option('viewpay_wordpress_options', viewpay_wordpress_default_options());
+    $text = isset($options['unlock_message_text']) ? $options['unlock_message_text'] : __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress');
+    ?>
+    <input type="text" name="viewpay_wordpress_options[unlock_message_text]" value="<?php echo esc_attr($text); ?>" class="regular-text" />
+    <p class="description">
+        <?php _e('Personnalisez le texte affiché après le déblocage du contenu.', 'viewpay-wordpress'); ?>
+    </p>
+    <?php
+}
+
+/**
+ * Unlock message timer render callback
+ */
+function viewpay_wordpress_unlock_message_timer_render() {
+    $options = get_option('viewpay_wordpress_options', viewpay_wordpress_default_options());
+    $timer = isset($options['unlock_message_timer']) ? intval($options['unlock_message_timer']) : 0;
+    ?>
+    <select name="viewpay_wordpress_options[unlock_message_timer]">
+        <option value="0" <?php selected($timer, 0); ?>><?php _e('Ne jamais masquer', 'viewpay-wordpress'); ?></option>
+        <option value="3" <?php selected($timer, 3); ?>><?php _e('3 secondes', 'viewpay-wordpress'); ?></option>
+        <option value="5" <?php selected($timer, 5); ?>><?php _e('5 secondes', 'viewpay-wordpress'); ?></option>
+        <option value="10" <?php selected($timer, 10); ?>><?php _e('10 secondes', 'viewpay-wordpress'); ?></option>
+        <option value="15" <?php selected($timer, 15); ?>><?php _e('15 secondes', 'viewpay-wordpress'); ?></option>
+        <option value="30" <?php selected($timer, 30); ?>><?php _e('30 secondes', 'viewpay-wordpress'); ?></option>
+    </select>
+    <p class="description">
+        <?php _e('Délai avant que le message de confirmation disparaisse automatiquement.', 'viewpay-wordpress'); ?>
+    </p>
     <?php
 }
 
