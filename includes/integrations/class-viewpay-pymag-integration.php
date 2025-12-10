@@ -88,24 +88,22 @@ class ViewPay_PyMag_Integration {
             $is_premium = carbon_get_post_meta($post->ID, 'is_premium_content');
             $this->debug_log("carbon_get_post_meta result: " . ($is_premium ? 'TRUE' : 'FALSE'));
             if (!$is_premium) {
-                $this->debug_log("Not premium content, exiting");
+                $this->debug_log("Not premium content (Carbon Fields), exiting");
                 return; // Exit if not premium content
             }
         } else {
-            $this->debug_log("carbon_get_post_meta function not available");
+            $this->debug_log("carbon_get_post_meta function not available, checking content for paywall");
+
+            // Fallback: check if paywall HTML is present in content
+            $content = get_post_field('post_content', $post->ID);
+            $this->debug_log("Post content length: " . strlen($content));
+
+            if (!$this->has_pymag_paywall($content)) {
+                $this->debug_log("No PyMag paywall detected in content, exiting");
+                return; // Exit if no paywall detected
+            }
         }
-        
-        // Also check if paywall HTML is present (fallback method)
-	/*
-	$content = get_post_field('post_content', $post->ID);
-        $this->debug_log("Post content length: " . strlen($content));
-        
-        if (!$this->has_pymag_paywall($content)) {
-            $this->debug_log("No paywall detected in content, exiting");
-            return; // Exit if no paywall detected
-	}
-	*/
-        
+
         $this->debug_log("SUCCESS: Initializing for premium post " . $post->ID);
         
         // Hook into content rendering to inject ViewPay button
@@ -195,22 +193,13 @@ class ViewPay_PyMag_Integration {
      * @return bool True if paywall is present
      */
     private function has_pymag_paywall($content) {
-	/*    
-	$has_paywall = strpos($content, 'premium-content-cta') !== false;
-        
+        $has_paywall = strpos($content, 'premium-content-cta') !== false;
+
         // Add console debug
         $this->debug_log("Checking for paywall in content (length: " . strlen($content) . ")");
         $this->debug_log("Paywall found: " . ($has_paywall ? 'YES' : 'NO'));
-        if ($has_paywall) {
-            $snippet = substr($content, strpos($content, 'premium-content-cta') - 50, 200);
-            $snippet = addslashes($snippet);
-        }
-        
-	return $has_paywall;
-	 */
-	$site_url = get_site_url();
-	if (strpos(strtolower($site_url), 'testwp.viewpay.tv') !== false) { return true; }
-     	else return false;
+
+        return $has_paywall;
     }
     
     /**

@@ -11,6 +11,7 @@ ViewPay WordPress est un plugin qui s'intègre avec les principaux systèmes de 
 ### Plugins de paywall compatibles
 
 - Paid Memberships Pro (PMPro)
+- Paid Member Subscriptions (PMS - Cozmoslabs)
 - Restrict Content Pro (RCP)
 - Simple Membership (SWPM)
 - PyMag (solution custom Pyrénées Magazine)
