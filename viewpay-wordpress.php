@@ -28,7 +28,7 @@ require_once VIEWPAY_WORDPRESS_PLUGIN_DIR . 'includes/viewpay-admin.php';
 function viewpay_wordpress_default_options() {
     return array(
         'site_id' => 'b23d3f0235ae89e4', // ID de démo par défaut
-        'paywall_type' => 'auto', // Type de paywall sélectionné
+        'paywall_type' => 'pms', // Type de paywall sélectionné (PMS par défaut)
         'custom_paywall_selector' => '', // Sélecteur CSS pour paywall custom
         'custom_button_location' => 'after', // Emplacement du bouton pour paywall custom
         'button_text' => 'Débloquer en regardant une publicité',
@@ -45,7 +45,7 @@ function viewpay_wordpress_default_options() {
 // Initialiser le plugin
 function viewpay_wordpress_init() {
     $options = get_option('viewpay_wordpress_options', viewpay_wordpress_default_options());
-    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'auto';
+    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'pms';
 
     // Si mode custom, toujours initialiser
     if ($paywall_type === 'custom') {
@@ -54,28 +54,14 @@ function viewpay_wordpress_init() {
         return;
     }
 
-    // Si un type de paywall spécifique est sélectionné (pas auto)
-    if ($paywall_type !== 'auto') {
-        // Vérifier que le paywall sélectionné est bien actif
-        if (viewpay_wordpress_is_paywall_active($paywall_type)) {
-            $viewpay = new ViewPay_WordPress();
-            $viewpay->init();
-        } else {
-            // Le paywall sélectionné n'est pas actif, afficher un avertissement
-            add_action('admin_notices', 'viewpay_wordpress_paywall_not_found_notice');
-        }
-        return;
+    // Vérifier que le paywall sélectionné est bien actif
+    if (viewpay_wordpress_is_paywall_active($paywall_type)) {
+        $viewpay = new ViewPay_WordPress();
+        $viewpay->init();
+    } else {
+        // Le paywall sélectionné n'est pas actif, afficher un avertissement
+        add_action('admin_notices', 'viewpay_wordpress_paywall_not_found_notice');
     }
-
-    // Mode auto: vérifier si un plugin compatible est actif
-    if (!viewpay_wordpress_is_compatible_plugin_active()) {
-        add_action('admin_notices', 'viewpay_wordpress_admin_notice');
-        return;
-    }
-
-    // Initialiser le plugin
-    $viewpay = new ViewPay_WordPress();
-    $viewpay->init();
 }
 add_action('plugins_loaded', 'viewpay_wordpress_init');
 
@@ -124,7 +110,7 @@ function viewpay_wordpress_validate_options($input) {
     $output['site_id'] = sanitize_text_field($input['site_id']);
 
     // Type de paywall
-    $allowed_paywalls = array('auto', 'pms', 'pmpro', 'rcp', 'swpm', 'wpmem', 'rua', 'um', 'custom');
+    $allowed_paywalls = array('pms', 'pmpro', 'rcp', 'swpm', 'wpmem', 'rua', 'um', 'custom');
     if (isset($input['paywall_type']) && in_array($input['paywall_type'], $allowed_paywalls)) {
         $output['paywall_type'] = $input['paywall_type'];
     } else {
@@ -210,7 +196,7 @@ function viewpay_wordpress_admin_notice() {
 // Message d'erreur si le paywall sélectionné n'est pas actif
 function viewpay_wordpress_paywall_not_found_notice() {
     $options = get_option('viewpay_wordpress_options', viewpay_wordpress_default_options());
-    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'auto';
+    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'pms';
     ?>
     <div class="notice notice-warning">
         <p>

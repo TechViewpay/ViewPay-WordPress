@@ -229,15 +229,10 @@ function viewpay_wordpress_site_id_render() {
  */
 function viewpay_wordpress_paywall_type_render() {
     $options = get_option('viewpay_wordpress_options', viewpay_wordpress_default_options());
-    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'auto';
+    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'pms';
 
     // Liste des paywalls supportés avec leur statut de détection
     $paywalls = array(
-        'auto' => array(
-            'label' => __('Détection automatique (non recommandé)', 'viewpay-wordpress'),
-            'detected' => false,
-            'description' => __('Le plugin essaiera de détecter automatiquement le paywall utilisé.', 'viewpay-wordpress')
-        ),
         'pms' => array(
             'label' => 'Paid Member Subscriptions (Cozmoslabs)',
             'detected' => function_exists('pms_is_member') || class_exists('Paid_Member_Subscriptions'),
@@ -284,7 +279,7 @@ function viewpay_wordpress_paywall_type_render() {
         <?php foreach ($paywalls as $key => $paywall): ?>
             <?php
             $detected_text = '';
-            if ($key !== 'auto' && $key !== 'custom') {
+            if ($key !== 'custom') {
                 $detected_text = $paywall['detected'] ? ' ✓ ' . __('(détecté)', 'viewpay-wordpress') : ' ✗ ' . __('(non détecté)', 'viewpay-wordpress');
             }
             ?>
@@ -305,7 +300,7 @@ function viewpay_wordpress_paywall_type_render() {
 function viewpay_wordpress_custom_paywall_selector_render() {
     $options = get_option('viewpay_wordpress_options', viewpay_wordpress_default_options());
     $selector = isset($options['custom_paywall_selector']) ? $options['custom_paywall_selector'] : '';
-    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'auto';
+    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'pms';
     $disabled = ($paywall_type !== 'custom') ? 'disabled' : '';
     ?>
     <input type='text'
@@ -327,7 +322,7 @@ function viewpay_wordpress_custom_paywall_selector_render() {
 function viewpay_wordpress_custom_button_location_render() {
     $options = get_option('viewpay_wordpress_options', viewpay_wordpress_default_options());
     $location = isset($options['custom_button_location']) ? $options['custom_button_location'] : 'after';
-    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'auto';
+    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'pms';
     $disabled = ($paywall_type !== 'custom') ? 'disabled' : '';
     ?>
     <select name='viewpay_wordpress_options[custom_button_location]'

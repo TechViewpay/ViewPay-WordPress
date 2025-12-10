@@ -58,17 +58,11 @@ class ViewPay_WordPress {
      * Configure l'intégration avec le plugin de paywall configuré
      */
     private function setup_paywall_integration() {
-        $paywall_type = isset($this->options['paywall_type']) ? $this->options['paywall_type'] : 'auto';
+        $paywall_type = isset($this->options['paywall_type']) ? $this->options['paywall_type'] : 'pms';
 
         $this->debug_log("setup_paywall_integration called - type: " . $paywall_type);
 
         $integration_dir = VIEWPAY_WORDPRESS_PLUGIN_DIR . 'includes/integrations/';
-
-        // Si mode auto, détecter automatiquement
-        if ($paywall_type === 'auto') {
-            $paywall_type = $this->detect_active_paywall();
-            $this->debug_log("Auto-detected paywall: " . $paywall_type);
-        }
 
         // Charger l'intégration appropriée
         switch ($paywall_type) {
@@ -353,7 +347,7 @@ class ViewPay_WordPress {
         $cookie_duration = isset($this->options['cookie_duration']) ? (int) $this->options['cookie_duration'] : 15;
 
         // Paywall type and custom settings
-        $paywall_type = isset($this->options['paywall_type']) ? $this->options['paywall_type'] : 'auto';
+        $paywall_type = isset($this->options['paywall_type']) ? $this->options['paywall_type'] : 'pms';
         $custom_selector = isset($this->options['custom_paywall_selector']) ? $this->options['custom_paywall_selector'] : '';
         $custom_location = isset($this->options['custom_button_location']) ? $this->options['custom_button_location'] : 'after';
 
