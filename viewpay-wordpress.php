@@ -36,9 +36,6 @@ function viewpay_wordpress_default_options() {
         'button_color' => '',
         'use_custom_color' => 'no', // Option pour activer/désactiver la personnalisation
         'enable_debug_logs' => 'no', // Option pour activer/désactiver les logs de debug
-        'unlock_message_enabled' => 'yes', // Afficher le message de déblocage
-        'unlock_message_text' => 'Contenu débloqué grâce à ViewPay', // Texte du message
-        'unlock_message_timer' => 0, // Timer en secondes (0 = pas de disparition)
     );
 }
 
@@ -158,24 +155,6 @@ function viewpay_wordpress_validate_options($input) {
 
     // Option d'activation des logs de debug
     $output['enable_debug_logs'] = isset($input['enable_debug_logs']) && $input['enable_debug_logs'] === 'yes' ? 'yes' : 'no';
-
-    // Message de déblocage - activation
-    $output['unlock_message_enabled'] = isset($input['unlock_message_enabled']) && $input['unlock_message_enabled'] === 'yes' ? 'yes' : 'no';
-
-    // Message de déblocage - texte
-    if (isset($input['unlock_message_text']) && !empty($input['unlock_message_text'])) {
-        $output['unlock_message_text'] = sanitize_text_field($input['unlock_message_text']);
-    } else {
-        $output['unlock_message_text'] = $defaults['unlock_message_text'];
-    }
-
-    // Message de déblocage - timer
-    $allowed_timers = array(0, 3, 5, 10, 15, 30);
-    if (isset($input['unlock_message_timer']) && in_array((int)$input['unlock_message_timer'], $allowed_timers)) {
-        $output['unlock_message_timer'] = (int)$input['unlock_message_timer'];
-    } else {
-        $output['unlock_message_timer'] = $defaults['unlock_message_timer'];
-    }
 
     return $output;
 }

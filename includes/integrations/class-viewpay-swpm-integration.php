@@ -196,22 +196,6 @@ class ViewPay_SWPM_Integration {
      * @return string The notice HTML or empty string
      */
     private function get_unlock_notice() {
-        $message_enabled = $this->main->get_option('unlock_message_enabled');
-        if ($message_enabled !== 'yes') {
-            return '';
-        }
-
-        $message_text = $this->main->get_option('unlock_message_text');
-        $message_timer = intval($this->main->get_option('unlock_message_timer'));
-
-        if (empty($message_text)) {
-            $message_text = __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress');
-        }
-
-        $notice = '<div class="viewpay-unlock-notice" data-timer="' . esc_attr($message_timer) . '" style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; text-align: center; transition: opacity 0.5s ease-out;">';
-        $notice .= '<p style="margin: 0;"><em>' . esc_html($message_text) . '</em></p>';
-        $notice .= '</div>';
-
-        return $notice;
+        return '';
     }
 }

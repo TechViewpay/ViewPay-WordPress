@@ -304,29 +304,11 @@ class ViewPay_PMS_Integration {
         add_filter('the_content', array($this, 'inject_button_in_gutenberg_blocks'), 50);
         add_filter('the_content', array($this, 'unlock_gutenberg_blocks'), 100);
 
-        // Check if unlock message is enabled
-        $message_enabled = $this->main->get_option('unlock_message_enabled');
-        $notice = '';
-
-        if ($message_enabled === 'yes') {
-            $message_text = $this->main->get_option('unlock_message_text');
-            $message_timer = intval($this->main->get_option('unlock_message_timer'));
-
-            if (empty($message_text)) {
-                $message_text = __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress');
-            }
-
-            // Add a notice that content was unlocked via ViewPay
-            $notice = '<div class="viewpay-unlock-notice" data-timer="' . esc_attr($message_timer) . '" style="background: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 4px; margin: 10px 0; text-align: center; transition: opacity 0.5s ease-out;">';
-            $notice .= '<p style="margin: 0;"><em>' . esc_html($message_text) . '</em></p>';
-            $notice .= '</div>';
-        }
-
         if ($this->is_debug_enabled()) {
             error_log('ViewPay PMS: Content unlocked successfully for post ' . $post->ID);
         }
 
-        return $notice . $unlocked_content;
+        return $unlocked_content;
     }
 
     /**

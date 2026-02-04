@@ -306,22 +306,6 @@ class ViewPay_PyMag_Integration {
             // Remove the premium-content-cta div entirely
             $content = preg_replace('/<div class="premium-content-cta">.*?<\/div>/s', '', $content);
 
-            // Add unlock notice if enabled
-            $message_enabled = $this->main->get_option('unlock_message_enabled');
-            if ($message_enabled === 'yes') {
-                $message_text = $this->main->get_option('unlock_message_text');
-                $message_timer = intval($this->main->get_option('unlock_message_timer'));
-
-                if (empty($message_text)) {
-                    $message_text = __('Contenu débloqué grâce à ViewPay', 'viewpay-wordpress');
-                }
-
-                $unlock_notice = '<div class="viewpay-unlock-notice" data-timer="' . esc_attr($message_timer) . '">';
-                $unlock_notice .= '<p><em>' . esc_html($message_text) . '</em></p>';
-                $unlock_notice .= '</div>';
-
-                $content .= $unlock_notice;
-            }
         }
         
         return $content;
@@ -399,20 +383,6 @@ class ViewPay_PyMag_Integration {
             height: 16px;
             background: url("https://cdn.jokerly.com/images/play_btn_white_small.svg") no-repeat center;
             background-size: contain;
-        }
-        
-        .viewpay-unlock-notice {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            padding: 10px;
-            border-radius: 4px;
-            margin: 20px 0;
-            text-align: center;
-        }
-        
-        .viewpay-unlock-notice p {
-            margin: 0;
         }
         
         @media (max-width: 768px) {
