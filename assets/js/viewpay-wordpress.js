@@ -74,6 +74,9 @@
 
         // For SwG integration
         $('.viewpay-swg-container').css('display', 'block').attr('style', 'display: block !important');
+
+        // For RRM (Reader Revenue Manager) integration
+        $('.viewpay-rrm-container').css('display', 'block').attr('style', 'display: block !important');
     }
 
     function VPnoAds(){
@@ -89,6 +92,7 @@
         $('.viewpay-separator-pymag').hide();
         $('.viewpay-custom-container').hide();
         $('.viewpay-swg-container').hide();
+        $('.viewpay-rrm-container').hide();
     }
 
     function VPloadAds(){
@@ -359,11 +363,18 @@
             // We just need to make sure the container shows when ads are available
         }
 
+        // For RRM (Reader Revenue Manager) paywall, similar to SwG
+        if (viewpayVars.paywallType === 'rrm') {
+            debugLog('Mode RRM (Reader Revenue Manager) détecté');
+            // The RRM integration handles button injection via PHP
+            // We just need to make sure the container shows when ads are available
+        }
+
         // Initialize ViewPay elements
         initViewPayElements();
 
-        // Handle click on unlock button (works for all integrations including SwG)
-        $(document).on('click', '#viewpay-button, .viewpay-swg-button', function(e) {
+        // Handle click on unlock button (works for all integrations including SwG and RRM)
+        $(document).on('click', '#viewpay-button, .viewpay-swg-button, .viewpay-rrm-button', function(e) {
             e.preventDefault();
             debugLog('Bouton cliqué');
             VPloadAds();

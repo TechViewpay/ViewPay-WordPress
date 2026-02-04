@@ -246,9 +246,14 @@ function viewpay_wordpress_paywall_type_render() {
             'description' => ''
         ),
         'swg' => array(
-            'label' => 'Subscribe with Google (SwG)',
+            'label' => 'Subscribe with Google (SwG) - Plugin standalone',
             'detected' => true, // SwG is detected via JavaScript, always show as available
-            'description' => __('Intégration avec Subscribe with Google de Google News.', 'viewpay-wordpress')
+            'description' => __('Pour le plugin SwG WordPress standalone (swg-wordpress-plugin).', 'viewpay-wordpress')
+        ),
+        'rrm' => array(
+            'label' => 'Reader Revenue Manager (Site Kit) - Recommandé',
+            'detected' => class_exists('Google\\Site_Kit\\Modules\\Reader_Revenue_Manager') || defined('GOOGLESITEKIT_VERSION'),
+            'description' => __('Pour Site Kit avec Reader Revenue Manager activé.', 'viewpay-wordpress')
         ),
         'custom' => array(
             'label' => __('Paywall personnalisé / Custom', 'viewpay-wordpress'),
@@ -273,6 +278,14 @@ function viewpay_wordpress_paywall_type_render() {
     <p class="description">
         <?php _e('<strong>Important :</strong> Sélectionnez le plugin de paywall que vous utilisez. Si votre paywall n\'est pas dans la liste, choisissez "Paywall personnalisé".', 'viewpay-wordpress'); ?>
     </p>
+    <div class="viewpay-paywall-help" style="margin-top: 15px; padding: 12px; background: #f0f6fc; border-left: 4px solid #1a73e8; font-size: 13px;">
+        <strong><?php _e('Google Subscribe with Google - Quelle option choisir ?', 'viewpay-wordpress'); ?></strong>
+        <ul style="margin: 10px 0 0 20px; list-style: disc;">
+            <li><strong>Reader Revenue Manager (Site Kit)</strong> : <?php _e('Vous utilisez le plugin <em>Site Kit by Google</em> avec le module Reader Revenue Manager activé. C\'est l\'approche recommandée par Google.', 'viewpay-wordpress'); ?></li>
+            <li><strong>Subscribe with Google (SwG) - Plugin standalone</strong> : <?php _e('Vous utilisez le plugin SwG WordPress indépendant (swg-wordpress-plugin sur GitHub), sans Site Kit.', 'viewpay-wordpress'); ?></li>
+            <li><strong>Paywall personnalisé</strong> : <?php _e('Vous avez une implémentation SwG custom dans votre thème ou un autre système de paywall non listé.', 'viewpay-wordpress'); ?></li>
+        </ul>
+    </div>
     <?php
 }
 
@@ -457,16 +470,16 @@ function viewpay_wordpress_options_page() {
         // Toggle custom fields based on paywall type selection
         function toggleCustomFields() {
             var paywallType = $('#viewpay-paywall-type').val();
-            // Les sélecteurs CSS sont utilisables pour 'custom' et 'swg'
-            var needsSelectors = (paywallType === 'custom' || paywallType === 'swg');
+            // Les sélecteurs CSS sont utilisables pour 'custom', 'swg' et 'rrm'
+            var needsSelectors = (paywallType === 'custom' || paywallType === 'swg' || paywallType === 'rrm');
 
             $('#viewpay-custom-paywall-selector').prop('disabled', !needsSelectors);
             $('#viewpay-custom-button-location').prop('disabled', !needsSelectors);
 
             // Mettre à jour le placeholder selon le type
-            if (paywallType === 'swg') {
-                $('#viewpay-custom-paywall-selector').attr('placeholder', '.swg-dialog, .article-content');
-                $('#custom-paywall-selector-desc').html('<?php echo esc_js(__('Sélecteur CSS du paywall SwG ou du conteneur d\'article.<br>Exemples : <code>.swg-dialog</code>, <code>.article-content</code>', 'viewpay-wordpress')); ?>');
+            if (paywallType === 'swg' || paywallType === 'rrm') {
+                $('#viewpay-custom-paywall-selector').attr('placeholder', '[subscriptions-section="content-not-granted"]');
+                $('#custom-paywall-selector-desc').html('<?php echo esc_js(__('Sélecteur CSS du paywall SwG/RRM ou du conteneur d\'article.<br>Exemples : <code>[subscriptions-section="content-not-granted"]</code>, <code>.swg-dialog</code>', 'viewpay-wordpress')); ?>');
             } else {
                 $('#viewpay-custom-paywall-selector').attr('placeholder', '.paywall-message, .restricted-content');
                 $('#custom-paywall-selector-desc').html('<?php echo esc_js(__('Sélecteur CSS de l\'élément qui contient le message de restriction du paywall.<br>Exemples : <code>.paywall-message</code>, <code>#premium-content-cta</code>, <code>.restricted-notice</code>', 'viewpay-wordpress')); ?>');

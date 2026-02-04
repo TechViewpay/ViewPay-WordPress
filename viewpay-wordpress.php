@@ -3,7 +3,7 @@
  * Plugin Name: ViewPay WordPress
  * Plugin URI: https://viewpay.tv/
  * Description: Intègre la solution ViewPay dans le paywall WordPress de votre choix.
- * Version: 1.4.0
+ * Version: 1.5.0
  * Author: ViewPay
  * Author URI: https://viewpay.tv/
  * Text Domain: viewpay-wordpress
@@ -16,7 +16,7 @@ if (!defined('WPINC')) {
 }
 
 // Définir les constantes
-define('VIEWPAY_WORDPRESS_VERSION', '1.4.0');
+define('VIEWPAY_WORDPRESS_VERSION', '1.5.0');
 define('VIEWPAY_WORDPRESS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIEWPAY_WORDPRESS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -107,7 +107,7 @@ function viewpay_wordpress_validate_options($input) {
     $output['site_id'] = sanitize_text_field($input['site_id']);
 
     // Type de paywall
-    $allowed_paywalls = array('pms', 'pmpro', 'rcp', 'swpm', 'wpmem', 'rua', 'um', 'custom');
+    $allowed_paywalls = array('pms', 'pmpro', 'rcp', 'swpm', 'wpmem', 'rua', 'um', 'swg', 'rrm', 'custom');
     if (isset($input['paywall_type']) && in_array($input['paywall_type'], $allowed_paywalls)) {
         $output['paywall_type'] = $input['paywall_type'];
     } else {

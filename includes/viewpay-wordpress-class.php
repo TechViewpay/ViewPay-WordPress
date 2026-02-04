@@ -128,6 +128,12 @@ class ViewPay_WordPress {
                 $this->debug_log("SwG (Subscribe with Google) integration loaded");
                 break;
 
+            case 'rrm':
+                require_once $integration_dir . 'class-viewpay-rrm-integration.php';
+                $this->integration = new ViewPay_RRM_Integration($this);
+                $this->debug_log("RRM (Reader Revenue Manager via Site Kit) integration loaded");
+                break;
+
             case 'custom':
                 require_once $integration_dir . 'class-viewpay-custom-integration.php';
                 $this->integration = new ViewPay_Custom_Integration($this);
