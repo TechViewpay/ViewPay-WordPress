@@ -71,6 +71,9 @@
 
         // For custom integration
         $('.viewpay-custom-container').css('display', 'block').attr('style', 'display: block !important');
+
+        // For SwG integration
+        $('.viewpay-swg-container').css('display', 'block').attr('style', 'display: block !important');
     }
 
     function VPnoAds(){
@@ -85,6 +88,7 @@
         $('.option--viewpay').hide();
         $('.viewpay-separator-pymag').hide();
         $('.viewpay-custom-container').hide();
+        $('.viewpay-swg-container').hide();
     }
 
     function VPloadAds(){
@@ -338,29 +342,6 @@
         }
     }
 
-    /**
-     * Handle unlock notice auto-hide timer
-     */
-    function initUnlockNoticeTimer() {
-        var $notice = $('.viewpay-unlock-notice');
-        if ($notice.length === 0) {
-            return;
-        }
-
-        var timer = parseInt($notice.data('timer'), 10);
-        if (timer > 0) {
-            debugLog('Message de déblocage configuré pour disparaître dans ' + timer + ' secondes');
-            setTimeout(function() {
-                $notice.css('opacity', '0');
-                setTimeout(function() {
-                    $notice.slideUp(300, function() {
-                        $notice.remove();
-                    });
-                }, 500);
-            }, timer * 1000);
-        }
-    }
-
     $(document).ready(function() {
         debugLog('Initialisation du plugin');
         debugLog('Paywall type: ' + viewpayVars.paywallType);
@@ -371,17 +352,26 @@
             injectCustomPaywallButton();
         }
 
+        // For SwG paywall, the button is injected via PHP but we need to handle visibility
+        if (viewpayVars.paywallType === 'swg') {
+            debugLog('Mode SwG détecté');
+            // The SwG integration handles button injection via PHP
+            // We just need to make sure the container shows when ads are available
+        }
+
         // Initialize ViewPay elements
         initViewPayElements();
 
-        // Initialize unlock notice timer
-        initUnlockNoticeTimer();
-
-        // Handle click on unlock button
-        $(document).on('click', '#viewpay-button', function(e) {
+        // Handle click on unlock button (works for all integrations including SwG)
+        $(document).on('click', '#viewpay-button, .viewpay-swg-button', function(e) {
             e.preventDefault();
             debugLog('Bouton cliqué');
             VPloadAds();
         });
     });
+
+    // Expose VPloadAds globally for SwG integration
+    window.VPloadAds = VPloadAds;
+    window.viewpayLoadAd = VPloadAds;
+
 })(jQuery);
