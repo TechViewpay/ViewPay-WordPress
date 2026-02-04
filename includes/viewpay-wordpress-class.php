@@ -122,6 +122,12 @@ class ViewPay_WordPress {
                 }
                 break;
 
+            case 'swg':
+                require_once $integration_dir . 'class-viewpay-swg-integration.php';
+                $this->integration = new ViewPay_SwG_Integration($this);
+                $this->debug_log("SwG (Subscribe with Google) integration loaded");
+                break;
+
             case 'custom':
                 require_once $integration_dir . 'class-viewpay-custom-integration.php';
                 $this->integration = new ViewPay_Custom_Integration($this);
