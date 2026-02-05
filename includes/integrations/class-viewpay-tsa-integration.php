@@ -11,6 +11,11 @@
  * - Troncature server-side dans single.php via wp_trim_words()
  * - Filtre 'tsa_user_has_access' pour contrôler l'accès
  *
+ * Stratégie ViewPay :
+ * - Le bouton ViewPay est injecté DANS le modal SwG (en dessous)
+ * - Utilise un MutationObserver pour détecter l'apparition du modal
+ * - Position fixed avec z-index maximum pour rester visible
+ *
  * @package ViewPay_WordPress
  */
 
@@ -55,11 +60,11 @@ class ViewPay_TSA_Integration {
         // Hook principal : intercepter le filtre TSA pour contrôler l'accès
         add_filter('tsa_user_has_access', array($this, 'check_viewpay_access'), 10, 1);
 
-        // Hook pour ajouter le bouton ViewPay au contenu tronqué
-        add_filter('the_content', array($this, 'add_viewpay_button'), 100);
-
         // Hook pour désactiver le script SwG si débloqué via ViewPay
         add_action('wp_head', array($this, 'maybe_disable_swg_script'), 1);
+
+        // Hook pour injecter le JavaScript qui attache le bouton au modal SwG
+        add_action('wp_footer', array($this, 'inject_swg_modal_script'), 100);
 
         // Ajouter les classes body
         add_filter('body_class', array($this, 'add_body_classes'));
@@ -171,89 +176,178 @@ class ViewPay_TSA_Integration {
     }
 
     /**
-     * Add ViewPay button to truncated content
-     *
-     * @param string $content The post content
-     * @return string Modified content with ViewPay button
+     * Inject JavaScript to attach ViewPay button to SwG modal
      */
-    public function add_viewpay_button($content) {
+    public function inject_swg_modal_script() {
+        if (!is_single()) {
+            return;
+        }
+
         global $post;
 
-        if (!$post || !is_single()) {
-            return $content;
+        if (!$post) {
+            return;
         }
 
-        // Ne pas ajouter si admin
+        // Ne pas injecter si admin
         if (current_user_can('manage_options')) {
-            return $content;
+            return;
         }
 
-        // Ne pas ajouter si déjà débloqué via ViewPay
+        // Ne pas injecter si déjà débloqué via ViewPay
         if ($this->main->is_post_unlocked($post->ID)) {
-            return $content;
+            return;
         }
 
-        // Ne pas ajouter si utilisateur connecté (a déjà accès)
+        // Ne pas injecter si utilisateur connecté (a déjà accès)
         if (is_user_logged_in()) {
-            return $content;
+            return;
         }
 
         // Vérifier si c'est un article premium
         if (!$this->is_premium_article($post->ID)) {
-            return $content;
+            return;
         }
 
-        // Vérifier si le bouton ViewPay existe déjà
-        if (strpos($content, 'viewpay-button') !== false) {
-            return $content;
-        }
-
-        if ($this->is_debug_enabled()) {
-            error_log('ViewPay TSA: Adding ViewPay button to premium article ' . $post->ID);
-        }
-
-        // Générer le HTML du bouton ViewPay
-        $nonce = wp_create_nonce('viewpay_nonce');
-        $button_html = $this->create_viewpay_button_html($post->ID, $nonce);
-
-        // Ajouter le bouton après le contenu tronqué
-        $content .= $button_html;
-
-        return $content;
-    }
-
-    /**
-     * Create the ViewPay button HTML
-     *
-     * @param int $post_id Post ID
-     * @param string $nonce Security nonce
-     * @return string Button HTML
-     */
-    private function create_viewpay_button_html($post_id, $nonce) {
         $button_text = $this->main->get_option('button_text') ?: __('Regarder une pub pour accéder', 'viewpay-wordpress');
         $or_text = $this->main->get_or_text();
+        $nonce = wp_create_nonce('viewpay_nonce');
 
-        $html = '<div class="viewpay-container viewpay-tsa-container">';
+        if ($this->is_debug_enabled()) {
+            error_log('ViewPay TSA: Injecting SwG modal script for post ' . $post->ID);
+        }
+        ?>
+        <script type="text/javascript">
+        (function() {
+            'use strict';
 
-        // Message d'introduction
-        $html .= '<div class="viewpay-tsa-message">';
-        $html .= '<p>' . esc_html__('Cet article est réservé aux abonnés.', 'viewpay-wordpress') . '</p>';
-        $html .= '</div>';
+            var debugEnabled = <?php echo $this->is_debug_enabled() ? 'true' : 'false'; ?>;
+            var postId = <?php echo (int) $post->ID; ?>;
+            var nonce = '<?php echo esc_js($nonce); ?>';
+            var buttonText = '<?php echo esc_js($button_text); ?>';
+            var orText = '<?php echo esc_js($or_text); ?>';
+            var viewpayAttached = false;
 
-        // Séparateur "OU"
-        $html .= '<span class="viewpay-separator">' . esc_html($or_text) . '</span>';
+            function log(msg) {
+                if (debugEnabled) {
+                    console.log('ViewPay TSA: ' + msg);
+                }
+            }
 
-        // Bouton ViewPay
-        $html .= '<button id="viewpay-button" class="viewpay-button viewpay-tsa-button" ';
-        $html .= 'data-post-id="' . esc_attr($post_id) . '" ';
-        $html .= 'data-nonce="' . esc_attr($nonce) . '">';
-        $html .= '<span class="viewpay-icon"></span>';
-        $html .= esc_html($button_text);
-        $html .= '</button>';
+            function createViewPayContainer() {
+                var container = document.createElement('div');
+                container.id = 'viewpay-swg-attachment';
+                container.className = 'viewpay-swg-attachment';
+                container.innerHTML =
+                    '<div class="viewpay-swg-separator">' + orText + '</div>' +
+                    '<button id="viewpay-button" class="viewpay-button viewpay-tsa-button" ' +
+                    'data-post-id="' + postId + '" data-nonce="' + nonce + '">' +
+                    '<span class="viewpay-icon"></span>' + buttonText +
+                    '</button>';
+                return container;
+            }
 
-        $html .= '</div>';
+            function attachToSwgModal(swgDialog) {
+                if (viewpayAttached) {
+                    log('Already attached, skipping');
+                    return;
+                }
 
-        return $html;
+                log('SwG dialog found, attaching ViewPay button');
+
+                // Récupérer la position et taille de l'iframe SwG
+                var rect = swgDialog.getBoundingClientRect();
+                var swgStyle = window.getComputedStyle(swgDialog);
+                var swgZIndex = parseInt(swgStyle.zIndex) || 2147483647;
+
+                // Créer le conteneur ViewPay
+                var container = createViewPayContainer();
+
+                // Positionner en fixed, juste en dessous du modal SwG
+                container.style.cssText =
+                    'position: fixed !important;' +
+                    'left: ' + rect.left + 'px !important;' +
+                    'top: ' + (rect.top + rect.height + 10) + 'px !important;' +
+                    'width: ' + rect.width + 'px !important;' +
+                    'z-index: ' + swgZIndex + ' !important;' +
+                    'display: block !important;';
+
+                document.body.appendChild(container);
+                viewpayAttached = true;
+
+                log('ViewPay button attached below SwG modal at top: ' + (rect.top + rect.height + 10));
+
+                // Mettre à jour la position si le modal bouge (resize, scroll)
+                function updatePosition() {
+                    if (!document.body.contains(swgDialog)) {
+                        // Modal supprimé, retirer notre conteneur aussi
+                        if (document.body.contains(container)) {
+                            document.body.removeChild(container);
+                            viewpayAttached = false;
+                            log('SwG dialog removed, detaching ViewPay');
+                        }
+                        return;
+                    }
+                    var newRect = swgDialog.getBoundingClientRect();
+                    container.style.left = newRect.left + 'px';
+                    container.style.top = (newRect.top + newRect.height + 10) + 'px';
+                    container.style.width = newRect.width + 'px';
+                }
+
+                // Observer les changements de taille/position
+                window.addEventListener('resize', updatePosition);
+                window.addEventListener('scroll', updatePosition);
+
+                // Vérifier périodiquement si le modal existe toujours
+                var checkInterval = setInterval(function() {
+                    if (!document.body.contains(swgDialog)) {
+                        clearInterval(checkInterval);
+                        if (document.body.contains(container)) {
+                            document.body.removeChild(container);
+                            viewpayAttached = false;
+                            log('SwG dialog removed (interval check), detaching ViewPay');
+                        }
+                    }
+                }, 500);
+            }
+
+            function checkForSwgDialog() {
+                var swgDialog = document.querySelector('iframe.swg-dialog');
+                if (swgDialog && !viewpayAttached) {
+                    attachToSwgModal(swgDialog);
+                }
+            }
+
+            // Observer pour détecter l'ajout de l'iframe SwG
+            var observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length) {
+                        checkForSwgDialog();
+                    }
+                });
+            });
+
+            // Démarrer l'observation
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+
+            // Vérifier immédiatement au cas où le modal est déjà là
+            document.addEventListener('DOMContentLoaded', checkForSwgDialog);
+            if (document.readyState !== 'loading') {
+                checkForSwgDialog();
+            }
+
+            // Vérifier aussi après un délai (le modal peut apparaître après le chargement)
+            setTimeout(checkForSwgDialog, 1000);
+            setTimeout(checkForSwgDialog, 2000);
+            setTimeout(checkForSwgDialog, 3000);
+
+            log('SwG modal observer initialized');
+        })();
+        </script>
+        <?php
     }
 
     /**
@@ -282,97 +376,82 @@ class ViewPay_TSA_Integration {
      */
     public function enqueue_tsa_styles() {
         $css = '
-        /* ViewPay TSA Integration Styles */
-        .viewpay-tsa-container {
-            margin: 30px 0;
-            padding: 25px;
+        /* ViewPay TSA Integration Styles - Attached to SwG Modal */
+        .viewpay-swg-attachment {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            border-radius: 0 0 12px 12px;
+            padding: 20px;
             text-align: center;
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
             border: 1px solid #dee2e6;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            position: relative;
-            z-index: 999999;
+            border-top: none;
+            box-sizing: border-box;
         }
 
-        .viewpay-tsa-message {
-            margin-bottom: 15px;
-            color: #495057;
-            font-size: 16px;
-        }
-
-        .viewpay-tsa-message p {
-            margin: 0;
-        }
-
-        .viewpay-tsa-container .viewpay-separator {
+        .viewpay-swg-separator {
             display: block;
-            margin: 15px 0;
+            margin-bottom: 15px;
             font-weight: bold;
             color: #6c757d;
-            font-size: 14px;
+            font-size: 13px;
             text-transform: uppercase;
             letter-spacing: 2px;
         }
 
-        .viewpay-tsa-button {
+        .viewpay-swg-attachment .viewpay-tsa-button {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             gap: 10px;
-            padding: 14px 28px;
-            font-size: 16px;
+            padding: 12px 24px;
+            font-size: 15px;
             font-weight: 600;
-            border-radius: 30px;
+            border-radius: 25px;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-width: 280px;
+            width: 100%;
+            max-width: 350px;
             border: none;
-            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
             color: white;
             text-transform: none;
         }
 
-        .viewpay-tsa-button:hover {
+        .viewpay-swg-attachment .viewpay-tsa-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
-            background: linear-gradient(135deg, #0056b3 0%, #003d80 100%);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+            background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
         }
 
-        .viewpay-tsa-button:active {
+        .viewpay-swg-attachment .viewpay-tsa-button:active {
             transform: translateY(0);
         }
 
-        .viewpay-tsa-button .viewpay-icon {
-            width: 20px;
-            height: 20px;
-        }
-
-        /* Cacher le conteneur ViewPay quand débloqué */
-        .viewpay-unlocked .viewpay-tsa-container,
-        .tsa-viewpay-unlocked .viewpay-tsa-container {
-            display: none !important;
+        .viewpay-swg-attachment .viewpay-icon {
+            width: 18px;
+            height: 18px;
         }
 
         /* Cacher les éléments SwG quand débloqué */
         .viewpay-unlocked .swg-dialog,
         .viewpay-unlocked [class*="swg-"],
+        .viewpay-unlocked .viewpay-swg-attachment,
         .tsa-viewpay-unlocked .swg-dialog,
-        .tsa-viewpay-unlocked [class*="swg-"] {
+        .tsa-viewpay-unlocked [class*="swg-"],
+        .tsa-viewpay-unlocked .viewpay-swg-attachment {
             display: none !important;
         }
 
         @media (max-width: 768px) {
-            .viewpay-tsa-container {
-                padding: 20px 15px;
-                margin: 20px 0;
+            .viewpay-swg-attachment {
+                padding: 15px 10px;
+                border-radius: 0 0 8px 8px;
             }
 
-            .viewpay-tsa-button {
-                width: 100%;
-                min-width: auto;
-                padding: 16px 24px;
-                font-size: 15px;
+            .viewpay-swg-attachment .viewpay-tsa-button {
+                padding: 14px 20px;
+                font-size: 14px;
+                max-width: 100%;
             }
         }
         ';
