@@ -3,7 +3,7 @@
  * Plugin Name: ViewPay WordPress
  * Plugin URI: https://viewpay.tv/
  * Description: Intègre la solution ViewPay dans le paywall WordPress de votre choix.
- * Version: 1.5.5
+ * Version: 1.5.6
  * Author: ViewPay
  * Author URI: https://viewpay.tv/
  * Text Domain: viewpay-wordpress
@@ -16,7 +16,7 @@ if (!defined('WPINC')) {
 }
 
 // Définir les constantes
-define('VIEWPAY_WORDPRESS_VERSION', '1.5.5');
+define('VIEWPAY_WORDPRESS_VERSION', '1.5.6');
 define('VIEWPAY_WORDPRESS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIEWPAY_WORDPRESS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
