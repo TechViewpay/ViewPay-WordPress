@@ -264,11 +264,15 @@ class ViewPay_TSA_Integration {
                 var container = createViewPayContainer();
 
                 // Positionner en fixed, juste en dessous du modal SwG
+                // Largeur ajustée pour correspondre au contenu du modal Google
+                var containerWidth = Math.min(rect.width - 200, 450);
+                var containerLeft = rect.left + (rect.width - containerWidth) / 2;
+
                 container.style.cssText =
                     'position: fixed !important;' +
-                    'left: ' + rect.left + 'px !important;' +
-                    'top: ' + (rect.top + rect.height + 10) + 'px !important;' +
-                    'width: ' + rect.width + 'px !important;' +
+                    'left: ' + containerLeft + 'px !important;' +
+                    'top: ' + (rect.top + rect.height) + 'px !important;' +
+                    'width: ' + containerWidth + 'px !important;' +
                     'z-index: ' + swgZIndex + ' !important;' +
                     'display: block !important;';
 
@@ -289,9 +293,11 @@ class ViewPay_TSA_Integration {
                         return;
                     }
                     var newRect = swgDialog.getBoundingClientRect();
-                    container.style.left = newRect.left + 'px';
-                    container.style.top = (newRect.top + newRect.height + 10) + 'px';
-                    container.style.width = newRect.width + 'px';
+                    var newWidth = Math.min(newRect.width - 200, 450);
+                    var newLeft = newRect.left + (newRect.width - newWidth) / 2;
+                    container.style.left = newLeft + 'px';
+                    container.style.top = (newRect.top + newRect.height) + 'px';
+                    container.style.width = newWidth + 'px';
                 }
 
                 // Observer les changements de taille/position
@@ -378,24 +384,24 @@ class ViewPay_TSA_Integration {
         $css = '
         /* ViewPay TSA Integration Styles - Attached to SwG Modal */
         .viewpay-swg-attachment {
-            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-            border-radius: 0 0 12px 12px;
-            padding: 20px;
+            background: #fff;
+            border-radius: 0 0 8px 8px;
+            padding: 16px 24px;
             text-align: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            border: 1px solid #dee2e6;
-            border-top: none;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #dadce0;
+            border-top: 1px solid #e8eaed;
             box-sizing: border-box;
         }
 
         .viewpay-swg-separator {
             display: block;
-            margin-bottom: 15px;
-            font-weight: bold;
-            color: #6c757d;
-            font-size: 13px;
+            margin-bottom: 12px;
+            font-weight: 400;
+            color: #5f6368;
+            font-size: 12px;
             text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
         }
 
         .viewpay-swg-attachment .viewpay-tsa-button {
@@ -404,23 +410,23 @@ class ViewPay_TSA_Integration {
             justify-content: center;
             gap: 10px;
             padding: 12px 24px;
-            font-size: 15px;
-            font-weight: 600;
-            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 20px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             width: 100%;
             max-width: 350px;
-            border: none;
-            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
-            color: white;
+            border: 1px solid #dadce0;
+            background: #fff;
+            color: #1a73e8;
             text-transform: none;
         }
 
         .viewpay-swg-attachment .viewpay-tsa-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
-            background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+            background: #f8f9fa;
+            border-color: #1a73e8;
+            box-shadow: 0 1px 3px rgba(26, 115, 232, 0.2);
         }
 
         .viewpay-swg-attachment .viewpay-tsa-button:active {
