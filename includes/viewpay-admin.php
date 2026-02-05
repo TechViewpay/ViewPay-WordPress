@@ -255,6 +255,11 @@ function viewpay_wordpress_paywall_type_render() {
             'detected' => class_exists('Google\\Site_Kit\\Modules\\Reader_Revenue_Manager') || defined('GOOGLESITEKIT_VERSION'),
             'description' => __('Pour Site Kit avec Reader Revenue Manager activé.', 'viewpay-wordpress')
         ),
+        'tsa' => array(
+            'label' => 'TSA Algérie (SwG Custom)',
+            'detected' => function_exists('get_field'), // Requires ACF
+            'description' => __('Intégration spécifique pour TSA Algérie avec SwG custom.', 'viewpay-wordpress')
+        ),
         'custom' => array(
             'label' => __('Paywall personnalisé / Custom', 'viewpay-wordpress'),
             'detected' => true,

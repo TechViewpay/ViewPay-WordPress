@@ -134,6 +134,12 @@ class ViewPay_WordPress {
                 $this->debug_log("RRM (Reader Revenue Manager via Site Kit) integration loaded");
                 break;
 
+            case 'tsa':
+                require_once $integration_dir . 'class-viewpay-tsa-integration.php';
+                $this->integration = new ViewPay_TSA_Integration($this);
+                $this->debug_log("TSA Algérie custom integration loaded");
+                break;
+
             case 'custom':
                 require_once $integration_dir . 'class-viewpay-custom-integration.php';
                 $this->integration = new ViewPay_Custom_Integration($this);

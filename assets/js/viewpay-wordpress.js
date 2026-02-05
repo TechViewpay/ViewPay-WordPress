@@ -77,6 +77,9 @@
 
         // For RRM (Reader Revenue Manager) integration
         $('.viewpay-rrm-container').css('display', 'block').attr('style', 'display: block !important');
+
+        // For TSA Algérie integration
+        $('.viewpay-tsa-container').css('display', 'block').attr('style', 'display: block !important');
     }
 
     function VPnoAds(){
@@ -93,6 +96,7 @@
         $('.viewpay-custom-container').hide();
         $('.viewpay-swg-container').hide();
         $('.viewpay-rrm-container').hide();
+        $('.viewpay-tsa-container').hide();
     }
 
     function VPloadAds(){
@@ -370,11 +374,18 @@
             // We just need to make sure the container shows when ads are available
         }
 
+        // For TSA Algérie custom SwG paywall
+        if (viewpayVars.paywallType === 'tsa') {
+            debugLog('Mode TSA Algérie détecté');
+            // The TSA integration handles button injection via PHP
+            // Uses ACF field 'article_premium_google' and filter 'tsa_user_has_access'
+        }
+
         // Initialize ViewPay elements
         initViewPayElements();
 
-        // Handle click on unlock button (works for all integrations including SwG and RRM)
-        $(document).on('click', '#viewpay-button, .viewpay-swg-button, .viewpay-rrm-button', function(e) {
+        // Handle click on unlock button (works for all integrations including SwG, RRM and TSA)
+        $(document).on('click', '#viewpay-button, .viewpay-swg-button, .viewpay-rrm-button, .viewpay-tsa-button', function(e) {
             e.preventDefault();
             debugLog('Bouton cliqué');
             VPloadAds();
