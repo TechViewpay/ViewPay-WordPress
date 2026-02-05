@@ -291,6 +291,8 @@ class ViewPay_TSA_Integration {
             border-radius: 12px;
             border: 1px solid #dee2e6;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            position: relative;
+            z-index: 999999;
         }
 
         .viewpay-tsa-message {
