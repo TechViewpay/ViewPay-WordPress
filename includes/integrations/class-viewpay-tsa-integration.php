@@ -232,15 +232,37 @@ class ViewPay_TSA_Integration {
                 }
             }
 
+            function hideSwgAndLoadAd() {
+                // Cacher le modal SwG
+                var swgDialog = document.querySelector('iframe.swg-dialog');
+                if (swgDialog) swgDialog.style.display = 'none';
+
+                // Cacher le background SwG
+                var swgBg = document.querySelector('swg-popup-background');
+                if (swgBg) swgBg.style.display = 'none';
+
+                // Cacher notre bouton
+                var vpBtn = document.getElementById('viewpay-swg-attachment');
+                if (vpBtn) vpBtn.style.display = 'none';
+
+                // Ouvrir le modal ViewPay
+                if (typeof window.VPloadAds === 'function') {
+                    window.VPloadAds();
+                }
+            }
+
             function createViewPayButton() {
                 var container = document.createElement('div');
                 container.id = 'viewpay-swg-attachment';
-                container.innerHTML =
-                    '<button id="viewpay-button" class="viewpay-button viewpay-tsa-button" ' +
-                    'data-post-id="' + postId + '" data-nonce="' + nonce + '" ' +
-                    'style="width:208px;height:40px;font-size:14px;font-weight:500;border-radius:20px;border:1px solid #dadce0;background:#fff;color:#1a73e8;cursor:pointer">' +
-                    buttonText +
-                    '</button>';
+                var btn = document.createElement('button');
+                btn.id = 'viewpay-button';
+                btn.className = 'viewpay-button viewpay-tsa-button';
+                btn.setAttribute('data-post-id', postId);
+                btn.setAttribute('data-nonce', nonce);
+                btn.style.cssText = 'width:208px;height:40px;font-size:14px;font-weight:500;border-radius:20px;border:1px solid #dadce0;background:#fff;color:#1a73e8;cursor:pointer';
+                btn.textContent = buttonText;
+                btn.onclick = hideSwgAndLoadAd;
+                container.appendChild(btn);
                 return container;
             }
 
@@ -263,7 +285,7 @@ class ViewPay_TSA_Integration {
                 // Positionnement : desktop = top avec offset, mobile = bottom fixe
                 var posStyle = isMobile
                     ? 'bottom: 60px;'
-                    : 'top: ' + (rect.top + rect.height - 109) + 'px;';
+                    : 'top: ' + (rect.top + rect.height - 58) + 'px;';
 
                 container.style.cssText =
                     'position: fixed;' +
@@ -294,7 +316,7 @@ class ViewPay_TSA_Integration {
                         container.style.bottom = '60px';
                     } else {
                         container.style.bottom = '';
-                        container.style.top = (newRect.top + newRect.height - 109) + 'px';
+                        container.style.top = (newRect.top + newRect.height - 58) + 'px';
                     }
                 }
 

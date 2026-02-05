@@ -329,8 +329,8 @@
         divCadreJokerlyADS.setAttribute('id', 'cadreJokerlyADS');
         divVPmodal.appendChild(divCadreJokerlyADS);
 
-        divVPmodal.style.cssText = 'width: 100% !important; height: 100% !important; display: none; position: fixed !important; top: 0 !important; left: 0 !important; background-color: rgba(0, 0, 0, 0.85) !important; z-index: 9999999 !important;';
-        divCadreJokerlyADS.style.cssText = 'margin: auto; top: 0; right: 0; left: 0; position: fixed; bottom: 0; width: 650px !important; height: 450px !important; z-index: 9999999 !important;';
+        divVPmodal.style.cssText = 'width: 100% !important; height: 100% !important; display: none; position: fixed !important; top: 0 !important; left: 0 !important; background-color: rgba(0, 0, 0, 0.85) !important; z-index: 2147483647 !important;';
+        divCadreJokerlyADS.style.cssText = 'margin: auto; top: 0; right: 0; left: 0; position: fixed; bottom: 0; width: 650px !important; height: 450px !important; z-index: 2147483647 !important;';
 
         document.body.appendChild(divVPmodal);
 
