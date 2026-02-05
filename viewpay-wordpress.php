@@ -3,7 +3,7 @@
  * Plugin Name: ViewPay WordPress
  * Plugin URI: https://viewpay.tv/
  * Description: Intègre la solution ViewPay dans le paywall WordPress de votre choix.
- * Version: 1.5.1
+ * Version: 1.5.2
  * Author: ViewPay
  * Author URI: https://viewpay.tv/
  * Text Domain: viewpay-wordpress
@@ -16,7 +16,7 @@ if (!defined('WPINC')) {
 }
 
 // Définir les constantes
-define('VIEWPAY_WORDPRESS_VERSION', '1.5.1');
+define('VIEWPAY_WORDPRESS_VERSION', '1.5.2');
 define('VIEWPAY_WORDPRESS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIEWPAY_WORDPRESS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -77,6 +77,10 @@ function viewpay_wordpress_is_paywall_active($paywall_type) {
         'wpmem' => function_exists('wpmem_is_blocked'),
         'rua' => class_exists('RUA_App'),
         'um' => class_exists('UM'),
+        'swg' => true, // Subscribe with Google - pas de dépendance plugin
+        'rrm' => class_exists('Google\\Site_Kit\\Modules\\Reader_Revenue_Manager') || defined('GOOGLESITEKIT_VERSION'),
+        'tsa' => true, // TSA Algérie - intégration custom spécifique
+        'pymag' => true, // Pyrénées Magazine - intégration custom spécifique
         'custom' => true,
     );
 
@@ -107,7 +111,7 @@ function viewpay_wordpress_validate_options($input) {
     $output['site_id'] = sanitize_text_field($input['site_id']);
 
     // Type de paywall
-    $allowed_paywalls = array('pms', 'pmpro', 'rcp', 'swpm', 'wpmem', 'rua', 'um', 'swg', 'rrm', 'tsa', 'custom');
+    $allowed_paywalls = array('pms', 'pmpro', 'rcp', 'swpm', 'wpmem', 'rua', 'um', 'swg', 'rrm', 'tsa', 'pymag', 'custom');
     if (isset($input['paywall_type']) && in_array($input['paywall_type'], $allowed_paywalls)) {
         $output['paywall_type'] = $input['paywall_type'];
     } else {
