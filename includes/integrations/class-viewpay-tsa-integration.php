@@ -212,8 +212,21 @@ class ViewPay_TSA_Integration {
         $button_text = $this->main->get_option('button_text') ?: __('Regarder une pub pour accéder', 'viewpay-wordpress');
         $nonce = wp_create_nonce('viewpay_nonce');
 
+        // Récupérer les options de positionnement configurables
+        $desktop_offset = (int) $this->main->get_option('tsa_desktop_offset');
+        $mobile_bottom = (int) $this->main->get_option('tsa_mobile_bottom');
+
+        // Valeurs par défaut si non définies
+        if ($desktop_offset === 0 && $this->main->get_option('tsa_desktop_offset') === null) {
+            $desktop_offset = -86;
+        }
+        if ($mobile_bottom === 0 && $this->main->get_option('tsa_mobile_bottom') === null) {
+            $mobile_bottom = 60;
+        }
+
         if ($this->is_debug_enabled()) {
             error_log('ViewPay TSA: Injecting SwG modal script for post ' . $post->ID);
+            error_log('ViewPay TSA: Desktop offset: ' . $desktop_offset . ', Mobile bottom: ' . $mobile_bottom);
         }
         ?>
         <script type="text/javascript">
@@ -224,6 +237,8 @@ class ViewPay_TSA_Integration {
             var postId = <?php echo (int) $post->ID; ?>;
             var nonce = '<?php echo esc_js($nonce); ?>';
             var buttonText = '<?php echo esc_js($button_text); ?>';
+            var desktopOffset = <?php echo (int) $desktop_offset; ?>;
+            var mobileBottom = <?php echo (int) $mobile_bottom; ?>;
             var viewpayAttached = false;
 
             function log(msg) {
@@ -284,8 +299,8 @@ class ViewPay_TSA_Integration {
 
                 // Positionnement : desktop = top avec offset, mobile = bottom fixe
                 var posStyle = isMobile
-                    ? 'bottom: 60px;'
-                    : 'top: ' + (rect.top + rect.height - 58) + 'px;';
+                    ? 'bottom: ' + mobileBottom + 'px;'
+                    : 'top: ' + (rect.top + rect.height + desktopOffset) + 'px;';
 
                 container.style.cssText =
                     'position: fixed;' +
@@ -313,10 +328,10 @@ class ViewPay_TSA_Integration {
                     container.style.left = (newRect.left + newRect.width / 2 - 104) + 'px';
                     if (newIsMobile) {
                         container.style.top = '';
-                        container.style.bottom = '60px';
+                        container.style.bottom = mobileBottom + 'px';
                     } else {
                         container.style.bottom = '';
-                        container.style.top = (newRect.top + newRect.height - 58) + 'px';
+                        container.style.top = (newRect.top + newRect.height + desktopOffset) + 'px';
                     }
                 }
 

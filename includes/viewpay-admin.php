@@ -101,6 +101,22 @@ function viewpay_wordpress_settings_init() {
         'viewpay_wordpress_paywall_section'
     );
 
+    add_settings_field(
+        'tsa_desktop_offset',
+        __('Position bouton (Desktop)', 'viewpay-wordpress'),
+        'viewpay_wordpress_tsa_desktop_offset_render',
+        'viewpay-wordpress',
+        'viewpay_wordpress_paywall_section'
+    );
+
+    add_settings_field(
+        'tsa_mobile_bottom',
+        __('Position bouton (Mobile)', 'viewpay-wordpress'),
+        'viewpay_wordpress_tsa_mobile_bottom_render',
+        'viewpay-wordpress',
+        'viewpay_wordpress_paywall_section'
+    );
+
     // Section Apparence
     add_settings_section(
         'viewpay_wordpress_appearance_section',
@@ -342,6 +358,50 @@ function viewpay_wordpress_custom_button_location_render() {
 }
 
 /**
+ * TSA Desktop offset field render callback
+ */
+function viewpay_wordpress_tsa_desktop_offset_render() {
+    $options = get_option('viewpay_wordpress_options', viewpay_wordpress_default_options());
+    $offset = isset($options['tsa_desktop_offset']) ? $options['tsa_desktop_offset'] : -86;
+    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'pms';
+    $disabled = ($paywall_type !== 'tsa') ? 'disabled' : '';
+    ?>
+    <input type='number'
+           name='viewpay_wordpress_options[tsa_desktop_offset]'
+           id='viewpay-tsa-desktop-offset'
+           value='<?php echo esc_attr($offset); ?>'
+           class="small-text"
+           <?php echo $disabled; ?>>
+    <span>px</span>
+    <p class="description" id="tsa-desktop-offset-desc">
+        <?php _e('Décalage vertical du bouton par rapport au bas du modal SwG sur desktop.<br>Valeur négative = vers le haut. Par défaut : <code>-86</code>', 'viewpay-wordpress'); ?>
+    </p>
+    <?php
+}
+
+/**
+ * TSA Mobile bottom field render callback
+ */
+function viewpay_wordpress_tsa_mobile_bottom_render() {
+    $options = get_option('viewpay_wordpress_options', viewpay_wordpress_default_options());
+    $bottom = isset($options['tsa_mobile_bottom']) ? $options['tsa_mobile_bottom'] : 60;
+    $paywall_type = isset($options['paywall_type']) ? $options['paywall_type'] : 'pms';
+    $disabled = ($paywall_type !== 'tsa') ? 'disabled' : '';
+    ?>
+    <input type='number'
+           name='viewpay_wordpress_options[tsa_mobile_bottom]'
+           id='viewpay-tsa-mobile-bottom'
+           value='<?php echo esc_attr($bottom); ?>'
+           class="small-text"
+           <?php echo $disabled; ?>>
+    <span>px</span>
+    <p class="description" id="tsa-mobile-bottom-desc">
+        <?php _e('Position du bouton depuis le bas de l\'écran sur mobile.<br>Par défaut : <code>60</code>', 'viewpay-wordpress'); ?>
+    </p>
+    <?php
+}
+
+/**
  * Button text field render callback
  */
 function viewpay_wordpress_button_text_render() {
@@ -477,9 +537,24 @@ function viewpay_wordpress_options_page() {
             var paywallType = $('#viewpay-paywall-type').val();
             // Les sélecteurs CSS sont utilisables pour 'custom', 'swg' et 'rrm'
             var needsSelectors = (paywallType === 'custom' || paywallType === 'swg' || paywallType === 'rrm');
+            // Les champs TSA sont uniquement pour 'tsa'
+            var isTsa = (paywallType === 'tsa');
 
             $('#viewpay-custom-paywall-selector').prop('disabled', !needsSelectors);
             $('#viewpay-custom-button-location').prop('disabled', !needsSelectors);
+
+            // Champs TSA
+            $('#viewpay-tsa-desktop-offset').prop('disabled', !isTsa);
+            $('#viewpay-tsa-mobile-bottom').prop('disabled', !isTsa);
+
+            // Afficher/masquer les lignes TSA
+            if (isTsa) {
+                $('#viewpay-tsa-desktop-offset').closest('tr').show();
+                $('#viewpay-tsa-mobile-bottom').closest('tr').show();
+            } else {
+                $('#viewpay-tsa-desktop-offset').closest('tr').hide();
+                $('#viewpay-tsa-mobile-bottom').closest('tr').hide();
+            }
 
             // Mettre à jour le placeholder selon le type
             if (paywallType === 'swg' || paywallType === 'rrm') {

@@ -36,6 +36,8 @@ function viewpay_wordpress_default_options() {
         'button_color' => '',
         'use_custom_color' => 'no', // Option pour activer/désactiver la personnalisation
         'enable_debug_logs' => 'no', // Option pour activer/désactiver les logs de debug
+        'tsa_desktop_offset' => -86, // Position desktop pour TSA (décalage en px)
+        'tsa_mobile_bottom' => 60, // Position mobile pour TSA (bottom en px)
     );
 }
 
@@ -159,6 +161,20 @@ function viewpay_wordpress_validate_options($input) {
 
     // Option d'activation des logs de debug
     $output['enable_debug_logs'] = isset($input['enable_debug_logs']) && $input['enable_debug_logs'] === 'yes' ? 'yes' : 'no';
+
+    // Position TSA desktop (décalage en px, valeur négative attendue)
+    if (isset($input['tsa_desktop_offset']) && is_numeric($input['tsa_desktop_offset'])) {
+        $output['tsa_desktop_offset'] = (int) $input['tsa_desktop_offset'];
+    } else {
+        $output['tsa_desktop_offset'] = $defaults['tsa_desktop_offset'];
+    }
+
+    // Position TSA mobile (bottom en px, valeur positive attendue)
+    if (isset($input['tsa_mobile_bottom']) && is_numeric($input['tsa_mobile_bottom'])) {
+        $output['tsa_mobile_bottom'] = (int) $input['tsa_mobile_bottom'];
+    } else {
+        $output['tsa_mobile_bottom'] = $defaults['tsa_mobile_bottom'];
+    }
 
     return $output;
 }
