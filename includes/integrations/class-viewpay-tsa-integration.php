@@ -346,7 +346,13 @@ class ViewPay_TSA_Integration {
                 }
             }
 
-            function hideSwgAndLoadAd() {
+            function hideSwgAndLoadAd(e) {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                log('hideSwgAndLoadAd called, event type: ' + (e ? e.type : 'none'));
+
                 // Cacher le modal SwG
                 var swgDialog = document.querySelector('iframe.swg-dialog');
                 if (swgDialog) swgDialog.style.display = 'none';
@@ -361,7 +367,10 @@ class ViewPay_TSA_Integration {
 
                 // Ouvrir le modal ViewPay
                 if (typeof window.VPloadAds === 'function') {
+                    log('Calling VPloadAds');
                     window.VPloadAds();
+                } else {
+                    log('ERROR: VPloadAds not found');
                 }
             }
 
@@ -378,9 +387,16 @@ class ViewPay_TSA_Integration {
                 // Le modal SwG a des marges internes d'environ 25px de chaque côté
                 var btnWidth = isMobile ? Math.min(modalWidth - 50, 320) : 208;
 
-                btn.style.cssText = 'width:' + btnWidth + 'px !important;height:40px !important;border-radius:20px !important;border:none !important;background:#0b57d0 !important;color:#fff !important;cursor:pointer !important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;line-height:40px !important;padding:0 16px !important;box-sizing:border-box !important;text-align:center !important;display:inline-block !important;';
+                btn.style.cssText = 'width:' + btnWidth + 'px !important;height:40px !important;border-radius:20px !important;border:none !important;background:#0b57d0 !important;color:#fff !important;cursor:pointer !important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;line-height:40px !important;padding:0 16px !important;box-sizing:border-box !important;text-align:center !important;display:inline-block !important;-webkit-tap-highlight-color:transparent !important;touch-action:manipulation !important;';
                 btn.textContent = buttonText;
+
+                // Handlers pour desktop ET mobile (iOS a besoin de touchend)
                 btn.onclick = hideSwgAndLoadAd;
+                btn.ontouchend = function(e) {
+                    log('touchend event fired');
+                    hideSwgAndLoadAd(e);
+                };
+
                 container.appendChild(btn);
                 container.btnWidth = btnWidth; // Stocker pour le positionnement
                 return container;
@@ -392,11 +408,25 @@ class ViewPay_TSA_Integration {
                     return;
                 }
 
-                log('SwG dialog found, waiting for animation to complete...');
+                log('SwG dialog found, waiting for SwG to fully load...');
                 viewpayAttached = true; // Marquer immédiatement pour éviter les doubles appels
 
-                // Attendre que l'animation SwG soit terminée (300ms typique)
-                setTimeout(function() {
+                // Attendre que swg-popup-background existe (SwG complètement chargé)
+                var waitForSwgComplete = function(attempts) {
+                    var swgBg = document.querySelector('swg-popup-background');
+                    if (swgBg || attempts >= 20) {
+                        if (swgBg) {
+                            log('swg-popup-background found after ' + (20 - attempts) + ' attempts, attaching button');
+                        } else {
+                            log('swg-popup-background not found after 20 attempts, attaching anyway');
+                        }
+                        doAttach();
+                    } else {
+                        setTimeout(function() { waitForSwgComplete(attempts - 1); }, 100);
+                    }
+                };
+
+                var doAttach = function() {
                     if (!document.body.contains(swgDialog)) {
                         log('SwG dialog disappeared during animation wait');
                         viewpayAttached = false;
@@ -424,6 +454,13 @@ class ViewPay_TSA_Integration {
                         'z-index: 2147483647;';  // Z-index max pour être au-dessus de tout (y compris swg-popup-background)
 
                     document.body.appendChild(container);
+
+                    // Désactiver pointer-events sur le background SwG pour que notre bouton soit cliquable
+                    var swgBg = document.querySelector('swg-popup-background');
+                    if (swgBg) {
+                        swgBg.style.setProperty('pointer-events', 'none', 'important');
+                        log('Disabled pointer-events on swg-popup-background');
+                    }
 
                     log('ViewPay button attached, isMobile: ' + isMobile + ', btnWidth: ' + container.btnWidth);
 
@@ -488,7 +525,10 @@ class ViewPay_TSA_Integration {
                             setTimeout(function() { checkForSwgDialog(); }, 300);
                         }
                     }, 500);
-                }, 800); // Attendre 800ms pour être sûr que l'animation SwG soit terminée
+                };
+
+                // Lancer l'attente de SwG complet (max 2 secondes = 20 x 100ms)
+                waitForSwgComplete(20);
             }
 
             function checkForSwgDialog() {
