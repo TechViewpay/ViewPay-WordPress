@@ -308,7 +308,7 @@ class ViewPay_TSA_Integration {
             return;
         }
 
-        $button_text = $this->main->get_option('button_text') ?: __('Regarder une pub pour accéder', 'viewpay-wordpress');
+        $button_text = __('Accès gratuit avec une pub', 'viewpay-wordpress');
         $nonce = wp_create_nonce('viewpay_nonce');
 
         // Récupérer les options de positionnement configurables
@@ -365,7 +365,7 @@ class ViewPay_TSA_Integration {
                 }
             }
 
-            function createViewPayButton() {
+            function createViewPayButton(isMobile, modalWidth) {
                 var container = document.createElement('div');
                 container.id = 'viewpay-swg-attachment';
                 var btn = document.createElement('button');
@@ -373,11 +373,15 @@ class ViewPay_TSA_Integration {
                 btn.className = 'viewpay-button viewpay-tsa-button';
                 btn.setAttribute('data-post-id', postId);
                 btn.setAttribute('data-nonce', nonce);
-                // Styles avec !important pour éviter l'écrasement par le CSS du site
-                btn.style.cssText = 'width:208px !important;height:40px !important;font-size:14px !important;font-weight:500 !important;border-radius:20px !important;border:1px solid #dadce0 !important;background:#fff !important;color:#1a73e8 !important;cursor:pointer !important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;line-height:40px !important;padding:0 16px !important;box-sizing:border-box !important;text-align:center !important;display:inline-block !important;';
+
+                // Largeur adaptée : mobile = même largeur que bouton S'abonner, desktop = 208px
+                var btnWidth = isMobile ? Math.min(modalWidth - 32, 320) : 208;
+
+                btn.style.cssText = 'width:' + btnWidth + 'px !important;height:40px !important;border-radius:20px !important;border:none !important;background:#0b57d0 !important;color:#fff !important;cursor:pointer !important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;line-height:40px !important;padding:0 16px !important;box-sizing:border-box !important;text-align:center !important;display:inline-block !important;';
                 btn.textContent = buttonText;
                 btn.onclick = hideSwgAndLoadAd;
                 container.appendChild(btn);
+                container.btnWidth = btnWidth; // Stocker pour le positionnement
                 return container;
             }
 
@@ -404,7 +408,8 @@ class ViewPay_TSA_Integration {
                     // Détecter mobile : modal collé en bas de l'écran
                     var isMobile = rect.top + rect.height > window.innerHeight - 50;
 
-                    var container = createViewPayButton();
+                    var container = createViewPayButton(isMobile, rect.width);
+                    var btnHalfWidth = container.btnWidth / 2;
 
                     // Positionnement : desktop = top avec offset, mobile = bottom fixe
                     var posStyle = isMobile
@@ -413,16 +418,17 @@ class ViewPay_TSA_Integration {
 
                     container.style.cssText =
                         'position: fixed;' +
-                        'left: ' + (rect.left + rect.width / 2 - 104) + 'px;' +
+                        'left: ' + (rect.left + rect.width / 2 - btnHalfWidth) + 'px;' +
                         posStyle +
                         'z-index: ' + swgZIndex + ';';
 
                     document.body.appendChild(container);
 
-                    log('ViewPay button attached, isMobile: ' + isMobile);
+                    log('ViewPay button attached, isMobile: ' + isMobile + ', btnWidth: ' + container.btnWidth);
 
                     // Stocker la référence du dialog actuel pour détecter les changements
                     var currentSwgDialog = swgDialog;
+                    var currentBtnHalfWidth = btnHalfWidth;
 
                     function updatePosition() {
                         if (!document.body.contains(currentSwgDialog)) {
@@ -436,7 +442,7 @@ class ViewPay_TSA_Integration {
                         var newRect = currentSwgDialog.getBoundingClientRect();
                         var newIsMobile = newRect.top + newRect.height > window.innerHeight - 50;
 
-                        container.style.left = (newRect.left + newRect.width / 2 - 104) + 'px';
+                        container.style.left = (newRect.left + newRect.width / 2 - currentBtnHalfWidth) + 'px';
                         if (newIsMobile) {
                             container.style.top = '';
                             container.style.bottom = mobileBottom + 'px';
@@ -547,8 +553,7 @@ class ViewPay_TSA_Integration {
         $css = '
         /* ViewPay TSA Integration Styles */
         #viewpay-swg-attachment .viewpay-tsa-button:hover {
-            background: #f8f9fa !important;
-            border-color: #1a73e8 !important;
+            background: #0842a0 !important;
         }
 
         /* Cacher les éléments SwG quand débloqué */
