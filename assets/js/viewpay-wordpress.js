@@ -58,9 +58,13 @@
     function VPexistAds(){
         debugLog('Publicité disponible, affichage du bouton et du séparateur');
 
-        // Show button
-        $('#viewpay-button').css('display', 'inline').attr('style', 'display: inline !important');
-        $('.viewpay-separator').css('display', 'inline').attr('style', 'display: inline !important');
+        // Show button - utiliser setProperty pour ne pas écraser les styles inline existants
+        $('#viewpay-button').each(function() {
+            this.style.setProperty('display', 'inline', 'important');
+        });
+        $('.viewpay-separator').each(function() {
+            this.style.setProperty('display', 'inline', 'important');
+        });
 
         // Add body class
         $('body').addClass('viewpay-ads-available');
@@ -163,7 +167,12 @@
                     }
 
                     setTimeout(function() {
-                        window.location.reload();
+                        // Utiliser l'URL de redirection avec le paramètre viewpay_unlocked si disponible
+                        if (response.data.redirect) {
+                            window.location.href = response.data.redirect;
+                        } else {
+                            window.location.reload();
+                        }
                     }, 1000);
                 }
             },

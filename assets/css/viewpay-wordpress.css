@@ -18,7 +18,8 @@
 }
 
 /* Ajouter !important pour contourner d'autres styles potentiels */
-.viewpay-button {
+/* Exclure les boutons TSA qui ont leur propre style */
+.viewpay-button:not(.viewpay-tsa-button) {
     display: inline-block !important;
     margin: 0 !important;
     background-image: url(https://cdn.jokerly.com/images/play_btn_white_small.svg);
@@ -123,6 +124,7 @@ body #VPmodal.viewpay-visible {
 }
 
 /* ALWAYS HIDE VIEWPAY SEPARATOR AND BUTTON BEFORE VIEWPAY INITIALIZATION */
-.viewpay-button, .viewpay-separator {
+/* Exclure les boutons TSA qui gèrent leur propre visibilité */
+.viewpay-button:not(.viewpay-tsa-button), .viewpay-separator {
 	display:none !important;
 }
