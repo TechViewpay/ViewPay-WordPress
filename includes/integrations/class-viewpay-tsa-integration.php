@@ -375,7 +375,9 @@ class ViewPay_TSA_Integration {
                 btn.setAttribute('data-nonce', nonce);
 
                 // Largeur adaptée : mobile = même largeur que bouton S'abonner, desktop = 208px
-                var btnWidth = isMobile ? Math.min(modalWidth - 32, 320) : 208;
+                // Le modal SwG contient une carte blanche avec margin ~16px et padding ~16px de chaque côté
+                // Donc le bouton S'abonner fait environ modalWidth - 64px
+                var btnWidth = isMobile ? Math.min(modalWidth - 64, 320) : 208;
 
                 btn.style.cssText = 'width:' + btnWidth + 'px !important;height:40px !important;border-radius:20px !important;border:none !important;background:#0b57d0 !important;color:#fff !important;cursor:pointer !important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;line-height:40px !important;padding:0 16px !important;box-sizing:border-box !important;text-align:center !important;display:inline-block !important;';
                 btn.textContent = buttonText;
