@@ -85,23 +85,58 @@ class ViewPay_TSA_Integration {
      * @return bool Modified access status
      */
     public function check_viewpay_access($has_access) {
+        if ($this->is_debug_enabled()) {
+            error_log('ViewPay TSA: check_viewpay_access called with has_access=' . ($has_access ? 'true' : 'false'));
+        }
+
         // Si déjà accès (utilisateur connecté), ne pas modifier
         if ($has_access) {
             return $has_access;
         }
 
-        global $post;
+        // Récupérer le post ID de plusieurs façons pour être robuste
+        $post_id = null;
 
-        if (!$post) {
+        // Méthode 1: global $post
+        global $post;
+        if ($post && isset($post->ID)) {
+            $post_id = $post->ID;
+        }
+
+        // Méthode 2: get_queried_object() - plus fiable dans certains contextes
+        if (!$post_id) {
+            $queried = get_queried_object();
+            if ($queried && isset($queried->ID)) {
+                $post_id = $queried->ID;
+            }
+        }
+
+        // Méthode 3: get_the_ID()
+        if (!$post_id) {
+            $post_id = get_the_ID();
+        }
+
+        if ($this->is_debug_enabled()) {
+            error_log('ViewPay TSA: Post ID resolved to: ' . ($post_id ?: 'null'));
+        }
+
+        if (!$post_id) {
+            if ($this->is_debug_enabled()) {
+                error_log('ViewPay TSA: No post ID found, returning original has_access');
+            }
             return $has_access;
         }
 
         // Vérifier si débloqué via ViewPay
-        if ($this->main->is_post_unlocked($post->ID)) {
+        if ($this->main->is_post_unlocked($post_id)) {
             if ($this->is_debug_enabled()) {
-                error_log('ViewPay TSA: Access granted via ViewPay for post ' . $post->ID);
+                error_log('ViewPay TSA: Access GRANTED via ViewPay for post ' . $post_id);
             }
             return true;
+        }
+
+        if ($this->is_debug_enabled()) {
+            error_log('ViewPay TSA: Access NOT granted for post ' . $post_id . ', returning original has_access');
         }
 
         return $has_access;
@@ -147,6 +182,64 @@ class ViewPay_TSA_Integration {
             <script type="text/javascript">
             // ViewPay: Disable SwG paywall for unlocked content
             (function() {
+                console.log('ViewPay TSA: Content unlocked, hiding SwG elements');
+
+                // Fonction pour cacher les éléments SwG (SwG utilise !important inline, on doit forcer via JS)
+                function hideSwgElements() {
+                    var swgDialog = document.querySelector('iframe.swg-dialog');
+                    var swgPopup = document.querySelector('swg-popup-background');
+                    var swgContainer = document.querySelector('.swg-container');
+
+                    if (swgDialog) {
+                        swgDialog.style.setProperty('display', 'none', 'important');
+                        swgDialog.style.setProperty('visibility', 'hidden', 'important');
+                        console.log('ViewPay TSA: SwG dialog hidden');
+                    }
+                    if (swgPopup) {
+                        swgPopup.style.setProperty('display', 'none', 'important');
+                        swgPopup.style.setProperty('visibility', 'hidden', 'important');
+                        console.log('ViewPay TSA: SwG popup background hidden');
+                    }
+                    if (swgContainer) {
+                        swgContainer.style.setProperty('display', 'none', 'important');
+                    }
+
+                    // Réactiver le scroll (SwG le désactive via overflow:hidden)
+                    if (swgDialog || swgPopup) {
+                        document.body.style.setProperty('overflow', 'auto', 'important');
+                        document.documentElement.style.setProperty('overflow', 'auto', 'important');
+                        console.log('ViewPay TSA: Scroll re-enabled');
+                    }
+                }
+
+                // Cacher immédiatement si déjà présents
+                hideSwgElements();
+
+                // Observer pour cacher dès qu'ils apparaissent
+                var observer = new MutationObserver(function(mutations) {
+                    hideSwgElements();
+                });
+
+                // Observer le body pour les nouveaux éléments
+                if (document.body) {
+                    observer.observe(document.body, { childList: true, subtree: true });
+                } else {
+                    document.addEventListener('DOMContentLoaded', function() {
+                        observer.observe(document.body, { childList: true, subtree: true });
+                        hideSwgElements();
+                    });
+                }
+
+                // Fallback: vérifier périodiquement pendant les 5 premières secondes
+                var checkCount = 0;
+                var checkInterval = setInterval(function() {
+                    hideSwgElements();
+                    checkCount++;
+                    if (checkCount >= 10) {
+                        clearInterval(checkInterval);
+                    }
+                }, 500);
+
                 // Override SWG_BASIC to prevent paywall display
                 window.SWG_BASIC = window.SWG_BASIC || [];
                 var originalPush = window.SWG_BASIC.push;
@@ -274,7 +367,8 @@ class ViewPay_TSA_Integration {
                 btn.className = 'viewpay-button viewpay-tsa-button';
                 btn.setAttribute('data-post-id', postId);
                 btn.setAttribute('data-nonce', nonce);
-                btn.style.cssText = 'width:208px;height:40px;font-size:14px;font-weight:500;border-radius:20px;border:1px solid #dadce0;background:#fff;color:#1a73e8;cursor:pointer';
+                // Styles avec !important pour éviter l'écrasement par le CSS du site
+                btn.style.cssText = 'width:208px !important;height:40px !important;font-size:14px !important;font-weight:500 !important;border-radius:20px !important;border:1px solid #dadce0 !important;background:#fff !important;color:#1a73e8 !important;cursor:pointer !important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif !important;line-height:40px !important;padding:0 16px !important;box-sizing:border-box !important;text-align:center !important;display:inline-block !important;';
                 btn.textContent = buttonText;
                 btn.onclick = hideSwgAndLoadAd;
                 container.appendChild(btn);
@@ -287,66 +381,101 @@ class ViewPay_TSA_Integration {
                     return;
                 }
 
-                log('SwG dialog found, attaching ViewPay button');
+                log('SwG dialog found, waiting for animation to complete...');
+                viewpayAttached = true; // Marquer immédiatement pour éviter les doubles appels
 
-                var rect = swgDialog.getBoundingClientRect();
-                var swgZIndex = parseInt(window.getComputedStyle(swgDialog).zIndex) || 2147483647;
-
-                // Détecter mobile : modal collé en bas de l'écran
-                var isMobile = rect.top + rect.height > window.innerHeight - 50;
-
-                var container = createViewPayButton();
-
-                // Positionnement : desktop = top avec offset, mobile = bottom fixe
-                var posStyle = isMobile
-                    ? 'bottom: ' + mobileBottom + 'px;'
-                    : 'top: ' + (rect.top + rect.height + desktopOffset) + 'px;';
-
-                container.style.cssText =
-                    'position: fixed;' +
-                    'left: ' + (rect.left + rect.width / 2 - 104) + 'px;' +
-                    posStyle +
-                    'z-index: ' + swgZIndex + ';';
-
-                document.body.appendChild(container);
-                viewpayAttached = true;
-
-                log('ViewPay button attached, isMobile: ' + isMobile);
-
-                function updatePosition() {
+                // Attendre que l'animation SwG soit terminée (300ms typique)
+                setTimeout(function() {
                     if (!document.body.contains(swgDialog)) {
-                        if (document.body.contains(container)) {
-                            document.body.removeChild(container);
-                            viewpayAttached = false;
-                            log('SwG dialog removed, detaching ViewPay');
-                        }
+                        log('SwG dialog disappeared during animation wait');
+                        viewpayAttached = false;
                         return;
                     }
-                    var newRect = swgDialog.getBoundingClientRect();
-                    var newIsMobile = newRect.top + newRect.height > window.innerHeight - 50;
 
-                    container.style.left = (newRect.left + newRect.width / 2 - 104) + 'px';
-                    if (newIsMobile) {
-                        container.style.top = '';
-                        container.style.bottom = mobileBottom + 'px';
-                    } else {
-                        container.style.bottom = '';
-                        container.style.top = (newRect.top + newRect.height + desktopOffset) + 'px';
-                    }
-                }
+                    var rect = swgDialog.getBoundingClientRect();
+                    var swgZIndex = parseInt(window.getComputedStyle(swgDialog).zIndex) || 2147483647;
 
-                window.addEventListener('resize', updatePosition);
+                    // Détecter mobile : modal collé en bas de l'écran
+                    var isMobile = rect.top + rect.height > window.innerHeight - 50;
 
-                var checkInterval = setInterval(function() {
-                    if (!document.body.contains(swgDialog)) {
-                        clearInterval(checkInterval);
-                        if (document.body.contains(container)) {
-                            document.body.removeChild(container);
-                            viewpayAttached = false;
-                            log('SwG dialog removed (interval check), detaching ViewPay');
+                    var container = createViewPayButton();
+
+                    // Positionnement : desktop = top avec offset, mobile = bottom fixe
+                    var posStyle = isMobile
+                        ? 'bottom: ' + mobileBottom + 'px;'
+                        : 'top: ' + (rect.top + rect.height + desktopOffset) + 'px;';
+
+                    container.style.cssText =
+                        'position: fixed;' +
+                        'left: ' + (rect.left + rect.width / 2 - 104) + 'px;' +
+                        posStyle +
+                        'z-index: ' + swgZIndex + ';';
+
+                    document.body.appendChild(container);
+
+                    log('ViewPay button attached, isMobile: ' + isMobile);
+
+                    // Stocker la référence du dialog actuel pour détecter les changements
+                    var currentSwgDialog = swgDialog;
+
+                    function updatePosition() {
+                        if (!document.body.contains(currentSwgDialog)) {
+                            if (document.body.contains(container)) {
+                                document.body.removeChild(container);
+                                viewpayAttached = false;
+                                log('SwG dialog removed, detaching ViewPay');
+                            }
+                            return;
+                        }
+                        var newRect = currentSwgDialog.getBoundingClientRect();
+                        var newIsMobile = newRect.top + newRect.height > window.innerHeight - 50;
+
+                        container.style.left = (newRect.left + newRect.width / 2 - 104) + 'px';
+                        if (newIsMobile) {
+                            container.style.top = '';
+                            container.style.bottom = mobileBottom + 'px';
+                        } else {
+                            container.style.bottom = '';
+                            container.style.top = (newRect.top + newRect.height + desktopOffset) + 'px';
                         }
                     }
-                }, 500);
+
+                    window.addEventListener('resize', updatePosition);
+
+                    // Vérifier périodiquement si le dialog SwG est toujours présent
+                    // et aussi détecter si un nouveau dialog a remplacé l'ancien
+                    var checkInterval = setInterval(function() {
+                        var currentDialog = document.querySelector('iframe.swg-dialog');
+
+                        // Si le dialog original a disparu
+                        if (!document.body.contains(currentSwgDialog)) {
+                            clearInterval(checkInterval);
+                            if (document.body.contains(container)) {
+                                document.body.removeChild(container);
+                            }
+                            viewpayAttached = false;
+                            log('SwG dialog removed (interval check), detaching ViewPay');
+
+                            // Si un nouveau dialog existe, réattacher
+                            if (currentDialog) {
+                                log('New SwG dialog detected, reattaching...');
+                                setTimeout(function() { checkForSwgDialog(); }, 300);
+                            }
+                            return;
+                        }
+
+                        // Si un nouveau dialog différent est apparu (SwG a changé de message)
+                        if (currentDialog && currentDialog !== currentSwgDialog) {
+                            clearInterval(checkInterval);
+                            if (document.body.contains(container)) {
+                                document.body.removeChild(container);
+                            }
+                            viewpayAttached = false;
+                            log('SwG dialog changed, reattaching to new dialog...');
+                            setTimeout(function() { checkForSwgDialog(); }, 300);
+                        }
+                    }, 500);
+                }, 800); // Attendre 800ms pour être sûr que l'animation SwG soit terminée
             }
 
             function checkForSwgDialog() {
