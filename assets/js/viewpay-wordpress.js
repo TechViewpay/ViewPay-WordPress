@@ -123,8 +123,18 @@
             modal.classList.remove('viewpay-visible');
         }
 
-        var postId = $('#viewpay-button').data('post-id');
-        var nonce = $('#viewpay-button').data('nonce');
+        // Chercher le postId depuis plusieurs sources possibles
+        var postId = $('#viewpay-button').data('post-id')
+            || $('[data-post-id]').first().data('post-id')
+            || window.viewpayCurrentPostId;
+        var nonce = $('#viewpay-button').data('nonce') || viewpayVars.nonce;
+
+        debugLog('VPcompleteAds appelé, postId=' + postId);
+
+        if (!postId) {
+            console.error('ViewPay: postId non trouvé, impossible de débloquer');
+            return;
+        }
 
         $.ajax({
             url: viewpayVars.ajaxurl,
@@ -135,6 +145,8 @@
                 nonce: viewpayVars.nonce
             },
             success: function(response) {
+                debugLog('Réponse AJAX reçue: ' + JSON.stringify(response));
+
                 if (response.success) {
                     debugLog('Contenu déverrouillé avec succès. Durée: ' + (response.data.duration_minutes || 'inconnue') + ' minutes');
 
@@ -166,14 +178,23 @@
                         }
                     }
 
+                    // Redirection avec paramètre GET pour TSA/SwG
+                    var redirectUrl = response.data.redirect;
+
+                    // Fallback: construire l'URL si redirect n'est pas défini
+                    if (!redirectUrl) {
+                        var currentUrl = window.location.href.split('?')[0];
+                        redirectUrl = currentUrl + '?viewpay_unlocked=' + Date.now();
+                        debugLog('Fallback redirect URL: ' + redirectUrl);
+                    }
+
+                    debugLog('Redirection vers: ' + redirectUrl);
+
                     setTimeout(function() {
-                        // Utiliser l'URL de redirection avec le paramètre viewpay_unlocked si disponible
-                        if (response.data.redirect) {
-                            window.location.href = response.data.redirect;
-                        } else {
-                            window.location.reload();
-                        }
-                    }, 1000);
+                        window.location.href = redirectUrl;
+                    }, 500);
+                } else {
+                    console.error('ViewPay: Réponse AJAX non success', response);
                 }
             },
             error: function(xhr, status, error) {
@@ -396,7 +417,14 @@
         // Handle click on unlock button (works for all integrations including SwG, RRM and TSA)
         $(document).on('click', '#viewpay-button, .viewpay-swg-button, .viewpay-rrm-button, .viewpay-tsa-button', function(e) {
             e.preventDefault();
-            debugLog('Bouton cliqué');
+            // Stocker le postId globalement pour le récupérer dans VPcompleteAds
+            var postId = $(this).data('post-id');
+            if (postId) {
+                window.viewpayCurrentPostId = postId;
+                debugLog('Bouton cliqué, postId stocké: ' + postId);
+            } else {
+                debugLog('Bouton cliqué, postId non trouvé sur le bouton');
+            }
             VPloadAds();
         });
     });

@@ -274,19 +274,16 @@ class ViewPay_WordPress {
 
     /**
      * Vérifie si un article a été déverrouillé via ViewPay
+     *
+     * Sécurité : exige cookie + paramètre URL pour éviter les abus
+     * - Le cookie prouve que l'utilisateur a regardé la vidéo (défini par AJAX)
+     * - Le paramètre URL permet de contourner SwG qui ne reconnaît pas le cookie
      */
     public function is_post_unlocked($post_id) {
         $post_id = (int)$post_id;
 
-        // Check URL parameter for direct unlocking (useful for testing)
-        if (isset($_GET['viewpay_unlocked'])) {
-            if ($this->is_debug_enabled()) {
-                error_log('ViewPay: Post ' . $post_id . ' unlocked via URL parameter');
-            }
-            return true;
-        }
-
-        // Check via cookies
+        // Vérifier d'abord si le cookie existe et contient ce post
+        $cookie_valid = false;
         if (isset($_COOKIE['viewpay_unlocked_posts']) && !empty($_COOKIE['viewpay_unlocked_posts'])) {
             $cookie_value = stripslashes($_COOKIE['viewpay_unlocked_posts']);
 
@@ -294,16 +291,31 @@ class ViewPay_WordPress {
                 $unlocked_posts = json_decode($cookie_value, true);
 
                 if (is_array($unlocked_posts) && in_array($post_id, $unlocked_posts)) {
-                    if ($this->is_debug_enabled()) {
-                        error_log('ViewPay: Content unlocked for post ' . $post_id);
-                    }
-                    return true;
+                    $cookie_valid = true;
                 }
             } catch (Exception $e) {
                 if ($this->is_debug_enabled()) {
                     error_log('ViewPay: Error decoding cookie: ' . $e->getMessage());
                 }
             }
+        }
+
+        // Sécurité renforcée : exiger cookie + paramètre URL
+        // Le paramètre URL seul ne suffit plus (évite les abus)
+        if (isset($_GET['viewpay_unlocked']) && $cookie_valid) {
+            if ($this->is_debug_enabled()) {
+                error_log('ViewPay: Post ' . $post_id . ' unlocked via cookie + URL parameter (secure)');
+            }
+            return true;
+        }
+
+        // Cookie seul : accès accordé pour les paywalls qui ne nécessitent pas le paramètre URL
+        // (paywalls autres que SwG/TSA)
+        if ($cookie_valid) {
+            if ($this->is_debug_enabled()) {
+                error_log('ViewPay: Content unlocked for post ' . $post_id . ' via cookie');
+            }
+            return true;
         }
 
         return false;

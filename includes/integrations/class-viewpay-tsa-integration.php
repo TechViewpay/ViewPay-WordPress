@@ -182,33 +182,40 @@ class ViewPay_TSA_Integration {
             <script type="text/javascript">
             // ViewPay: Disable SwG paywall for unlocked content
             (function() {
-                console.log('ViewPay TSA: Content unlocked, hiding SwG elements');
+                var swgHidden = false; // Flag pour éviter les logs répétés
 
                 // Fonction pour cacher les éléments SwG (SwG utilise !important inline, on doit forcer via JS)
                 function hideSwgElements() {
                     var swgDialog = document.querySelector('iframe.swg-dialog');
                     var swgPopup = document.querySelector('swg-popup-background');
                     var swgContainer = document.querySelector('.swg-container');
+                    var didHide = false;
 
                     if (swgDialog) {
                         swgDialog.style.setProperty('display', 'none', 'important');
                         swgDialog.style.setProperty('visibility', 'hidden', 'important');
-                        console.log('ViewPay TSA: SwG dialog hidden');
+                        didHide = true;
                     }
                     if (swgPopup) {
                         swgPopup.style.setProperty('display', 'none', 'important');
                         swgPopup.style.setProperty('visibility', 'hidden', 'important');
-                        console.log('ViewPay TSA: SwG popup background hidden');
+                        didHide = true;
                     }
                     if (swgContainer) {
                         swgContainer.style.setProperty('display', 'none', 'important');
+                        didHide = true;
                     }
 
                     // Réactiver le scroll (SwG le désactive via overflow:hidden)
-                    if (swgDialog || swgPopup) {
+                    if (didHide) {
                         document.body.style.setProperty('overflow', 'auto', 'important');
                         document.documentElement.style.setProperty('overflow', 'auto', 'important');
-                        console.log('ViewPay TSA: Scroll re-enabled');
+
+                        // Log une seule fois
+                        if (!swgHidden) {
+                            swgHidden = true;
+                            console.log('ViewPay TSA: SwG elements hidden, content unlocked');
+                        }
                     }
                 }
 
@@ -254,7 +261,6 @@ class ViewPay_TSA_Integration {
                                 // Change to open access if it contains premium
                                 if (config.isPartOfProductId.indexOf('premium') !== -1) {
                                     config.isPartOfProductId = config.isPartOfProductId.replace(/premium.*$/, 'openaccess');
-                                    console.log('ViewPay: SwG product ID changed to open access');
                                 }
                             }
                             return originalInit.call(this, config);
