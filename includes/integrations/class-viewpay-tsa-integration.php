@@ -455,9 +455,10 @@ class ViewPay_TSA_Integration {
                         ', pos=' + Math.round(rect.left) + ',' + Math.round(rect.top));
 
                     // Le modal doit être stable pendant au moins 3 checks consécutifs (300ms)
+                    // Puis on attend 1 seconde supplémentaire pour l'animation SwG
                     if (stableCount >= 3) {
-                        log('SwG dialog is stable and visible after ' + waitAttempts + ' attempts, attaching button');
-                        doAttach();
+                        log('SwG dialog is stable and visible after ' + waitAttempts + ' attempts, waiting 1s before attaching...');
+                        setTimeout(doAttach, 1000);
                     } else if (waitAttempts >= maxWaitAttempts) {
                         log('Max wait attempts reached, attaching anyway');
                         doAttach();
