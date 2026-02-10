@@ -408,21 +408,61 @@ class ViewPay_TSA_Integration {
                     return;
                 }
 
-                log('SwG dialog found, waiting for SwG to fully load...');
+                log('SwG dialog found, waiting for it to be fully visible and positioned...');
                 viewpayAttached = true; // Marquer immédiatement pour éviter les doubles appels
 
-                // Attendre que swg-popup-background existe (SwG complètement chargé)
-                var waitForSwgComplete = function(attempts) {
-                    var swgBg = document.querySelector('swg-popup-background');
-                    if (swgBg || attempts >= 20) {
-                        if (swgBg) {
-                            log('swg-popup-background found after ' + (20 - attempts) + ' attempts, attaching button');
-                        } else {
-                            log('swg-popup-background not found after 20 attempts, attaching anyway');
-                        }
+                // Attendre que le modal SwG soit réellement visible et positionné
+                // On vérifie: taille > 0, position stable, et visible
+                var lastRect = null;
+                var stableCount = 0;
+                var waitAttempts = 0;
+                var maxWaitAttempts = 50; // 5 secondes max (50 x 100ms)
+
+                var waitForSwgComplete = function() {
+                    waitAttempts++;
+
+                    if (!document.body.contains(swgDialog)) {
+                        log('SwG dialog disappeared during wait');
+                        viewpayAttached = false;
+                        return;
+                    }
+
+                    var rect = swgDialog.getBoundingClientRect();
+                    var style = window.getComputedStyle(swgDialog);
+                    var isVisible = style.display !== 'none' &&
+                                    style.visibility !== 'hidden' &&
+                                    parseFloat(style.opacity) > 0;
+                    var hasSize = rect.width > 100 && rect.height > 100;
+
+                    // Vérifier si la position est stable (ne change plus)
+                    var isStable = lastRect &&
+                                   Math.abs(rect.top - lastRect.top) < 2 &&
+                                   Math.abs(rect.left - lastRect.left) < 2 &&
+                                   Math.abs(rect.width - lastRect.width) < 2 &&
+                                   Math.abs(rect.height - lastRect.height) < 2;
+
+                    lastRect = { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
+
+                    if (isVisible && hasSize && isStable) {
+                        stableCount++;
+                    } else {
+                        stableCount = 0;
+                    }
+
+                    log('Wait attempt ' + waitAttempts + ': visible=' + isVisible + ', hasSize=' + hasSize +
+                        ', stable=' + isStable + ', stableCount=' + stableCount +
+                        ', size=' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
+                        ', pos=' + Math.round(rect.left) + ',' + Math.round(rect.top));
+
+                    // Le modal doit être stable pendant au moins 3 checks consécutifs (300ms)
+                    if (stableCount >= 3) {
+                        log('SwG dialog is stable and visible after ' + waitAttempts + ' attempts, attaching button');
+                        doAttach();
+                    } else if (waitAttempts >= maxWaitAttempts) {
+                        log('Max wait attempts reached, attaching anyway');
                         doAttach();
                     } else {
-                        setTimeout(function() { waitForSwgComplete(attempts - 1); }, 100);
+                        setTimeout(waitForSwgComplete, 100);
                     }
                 };
 
@@ -527,8 +567,8 @@ class ViewPay_TSA_Integration {
                     }, 500);
                 };
 
-                // Lancer l'attente de SwG complet (max 2 secondes = 20 x 100ms)
-                waitForSwgComplete(20);
+                // Lancer l'attente de SwG complet (attendre que le modal soit visible et stable)
+                waitForSwgComplete();
             }
 
             function checkForSwgDialog() {
