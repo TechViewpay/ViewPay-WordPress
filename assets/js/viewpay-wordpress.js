@@ -130,6 +130,51 @@
         }
     }
 
+    /**
+     * Déblocage côté client en cas d'échec AJAX
+     * L'utilisateur a regardé la pub, on lui offre l'article quand même
+     */
+    function unlockContentClientSide(postId) {
+        debugLog('Déblocage côté client pour postId=' + postId);
+
+        // Durée par défaut si non disponible (15 minutes)
+        var durationMinutes = (viewpayVars.cookieDuration && parseInt(viewpayVars.cookieDuration)) || 15;
+
+        try {
+            var existingCookie = getCookie('viewpay_unlocked_posts');
+            var cookieData = [];
+
+            if (existingCookie) {
+                try {
+                    cookieData = JSON.parse(existingCookie);
+                } catch(e) {
+                    cookieData = [];
+                }
+                if (!Array.isArray(cookieData)) {
+                    cookieData = [];
+                }
+            }
+
+            if (!cookieData.includes(postId)) {
+                cookieData.push(postId);
+            }
+
+            setCookie('viewpay_unlocked_posts', JSON.stringify(cookieData), durationMinutes);
+            debugLog('Cookie client défini (fallback) pour ' + durationMinutes + ' minutes');
+        } catch(e) {
+            console.error('ViewPay: Erreur lors de la définition du cookie client', e);
+        }
+
+        // Redirection pour afficher le contenu débloqué
+        var currentUrl = window.location.href.split('?')[0];
+        var redirectUrl = currentUrl + '?viewpay_unlocked=' + Date.now();
+        debugLog('Redirection fallback vers: ' + redirectUrl);
+
+        setTimeout(function() {
+            window.location.href = redirectUrl;
+        }, 500);
+    }
+
     function VPcompleteAds(){
         var modal = document.getElementById("VPmodal");
         if (modal) {
@@ -147,6 +192,10 @@
 
         if (!postId) {
             console.error('ViewPay: postId non trouvé, impossible de débloquer');
+            // L'utilisateur a regardé la pub, on recharge la page pour réessayer
+            // (cas très rare, ne devrait pas arriver en pratique)
+            debugLog('postId manquant après visionnage pub - rechargement de la page');
+            window.location.reload();
             return;
         }
 
@@ -209,10 +258,16 @@
                     }, 500);
                 } else {
                     console.error('ViewPay: Réponse AJAX non success', response);
+                    // L'utilisateur a regardé la pub, on lui offre l'article quand même
+                    debugLog('Échec AJAX mais pub regardée - déblocage côté client');
+                    unlockContentClientSide(postId);
                 }
             },
             error: function(xhr, status, error) {
                 console.error('ViewPay: Erreur lors du déverrouillage du contenu', error);
+                // L'utilisateur a regardé la pub, on lui offre l'article quand même
+                debugLog('Erreur réseau mais pub regardée - déblocage côté client');
+                unlockContentClientSide(postId);
             }
         });
     }
@@ -222,6 +277,12 @@
         if (modal) {
             modal.style.setProperty('display', 'none', 'important');
             modal.classList.remove('viewpay-visible');
+        }
+
+        // Restaurer l'état du paywall précédent (SwG/TSA) si la fonction existe
+        if (typeof window.viewpayRestoreSwg === 'function') {
+            debugLog('Restauration de l\'état SwG après fermeture ViewPay');
+            window.viewpayRestoreSwg();
         }
     }
 

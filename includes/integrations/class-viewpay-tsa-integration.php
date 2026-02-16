@@ -346,6 +346,11 @@ class ViewPay_TSA_Integration {
                 }
             }
 
+            // Stocker les références des éléments SwG cachés pour les restaurer
+            var hiddenSwgDialog = null;
+            var hiddenSwgBg = null;
+            var hiddenVpBtn = null;
+
             function hideSwgAndLoadAd(e) {
                 if (e) {
                     e.preventDefault();
@@ -354,16 +359,16 @@ class ViewPay_TSA_Integration {
                 log('hideSwgAndLoadAd called, event type: ' + (e ? e.type : 'none'));
 
                 // Cacher le modal SwG
-                var swgDialog = document.querySelector('iframe.swg-dialog');
-                if (swgDialog) swgDialog.style.display = 'none';
+                hiddenSwgDialog = document.querySelector('iframe.swg-dialog');
+                if (hiddenSwgDialog) hiddenSwgDialog.style.display = 'none';
 
                 // Cacher le background SwG
-                var swgBg = document.querySelector('swg-popup-background');
-                if (swgBg) swgBg.style.display = 'none';
+                hiddenSwgBg = document.querySelector('swg-popup-background');
+                if (hiddenSwgBg) hiddenSwgBg.style.display = 'none';
 
                 // Cacher notre bouton
-                var vpBtn = document.getElementById('viewpay-swg-attachment');
-                if (vpBtn) vpBtn.style.display = 'none';
+                hiddenVpBtn = document.getElementById('viewpay-swg-attachment');
+                if (hiddenVpBtn) hiddenVpBtn.style.display = 'none';
 
                 // Ouvrir le modal ViewPay
                 if (typeof window.VPloadAds === 'function') {
@@ -373,6 +378,34 @@ class ViewPay_TSA_Integration {
                     log('ERROR: VPloadAds not found');
                 }
             }
+
+            // Fonction globale pour restaurer SwG quand ViewPay est fermé sans compléter
+            window.viewpayRestoreSwg = function() {
+                log('viewpayRestoreSwg called - restoring SwG state');
+
+                // Restaurer le modal SwG
+                if (hiddenSwgDialog) {
+                    hiddenSwgDialog.style.display = '';
+                    log('SwG dialog restored');
+                }
+
+                // Restaurer le background SwG
+                if (hiddenSwgBg) {
+                    hiddenSwgBg.style.display = '';
+                    log('SwG background restored');
+                }
+
+                // Restaurer notre bouton ViewPay
+                if (hiddenVpBtn) {
+                    hiddenVpBtn.style.display = '';
+                    log('ViewPay button restored');
+                }
+
+                // Réinitialiser les références
+                hiddenSwgDialog = null;
+                hiddenSwgBg = null;
+                hiddenVpBtn = null;
+            };
 
             function createViewPayButton(isMobile, modalWidth) {
                 var container = document.createElement('div');
