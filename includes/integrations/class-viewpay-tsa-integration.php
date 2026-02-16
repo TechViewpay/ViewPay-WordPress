@@ -433,6 +433,7 @@ class ViewPay_TSA_Integration {
                                     style.visibility !== 'hidden' &&
                                     parseFloat(style.opacity) > 0;
                     var hasSize = rect.width > 100 && rect.height > 100;
+                    var isContentLoaded = rect.height > 400; // Le modal avec contenu fait ~520px, attendre que le contenu soit chargé
 
                     // Vérifier si la position est stable (ne change plus)
                     var isStable = lastRect &&
@@ -443,14 +444,14 @@ class ViewPay_TSA_Integration {
 
                     lastRect = { top: rect.top, left: rect.left, width: rect.width, height: rect.height };
 
-                    if (isVisible && hasSize && isStable) {
+                    if (isVisible && hasSize && isStable && isContentLoaded) {
                         stableCount++;
                     } else {
                         stableCount = 0;
                     }
 
                     log('Wait attempt ' + waitAttempts + ': visible=' + isVisible + ', hasSize=' + hasSize +
-                        ', stable=' + isStable + ', stableCount=' + stableCount +
+                        ', stable=' + isStable + ', contentLoaded=' + isContentLoaded + ', stableCount=' + stableCount +
                         ', size=' + Math.round(rect.width) + 'x' + Math.round(rect.height) +
                         ', pos=' + Math.round(rect.left) + ',' + Math.round(rect.top));
 
