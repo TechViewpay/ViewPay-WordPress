@@ -573,12 +573,51 @@ class ViewPay_TSA_Integration {
                 waitForSwgComplete();
             }
 
+            // Variable pour stocker le dialog SwG en attente
+            var pendingSwgDialog = null;
+
             function checkForSwgDialog() {
                 var swgDialog = document.querySelector('iframe.swg-dialog');
                 if (swgDialog && !viewpayAttached) {
-                    attachToSwgModal(swgDialog);
+                    // Vérifier si ViewPay a déjà fait sa vérification
+                    if (window.viewpayAdsAvailable === true) {
+                        log('Ads available, attaching button to SwG modal');
+                        attachToSwgModal(swgDialog);
+                    } else if (window.viewpayAdsAvailable === false) {
+                        log('No ads available (mobileCheckVideo KO), not showing button');
+                        // Ne pas créer le bouton
+                    } else {
+                        // ViewPay n'a pas encore fait sa vérification, attendre
+                        log('Waiting for ViewPay ads check...');
+                        pendingSwgDialog = swgDialog;
+                    }
                 }
             }
+
+            // Écouter les events ViewPay pour le cas où le modal SwG apparaît avant la vérification
+            jQuery(document).on('viewpay:ads-available', function() {
+                log('Received viewpay:ads-available event');
+                if (pendingSwgDialog && !viewpayAttached) {
+                    // Vérifier que le dialog est toujours dans le DOM
+                    if (document.body.contains(pendingSwgDialog)) {
+                        log('Attaching button to pending SwG modal');
+                        attachToSwgModal(pendingSwgDialog);
+                    } else {
+                        // Le dialog a changé, chercher le nouveau
+                        var currentDialog = document.querySelector('iframe.swg-dialog');
+                        if (currentDialog) {
+                            log('Pending dialog gone, attaching to current dialog');
+                            attachToSwgModal(currentDialog);
+                        }
+                    }
+                    pendingSwgDialog = null;
+                }
+            });
+
+            jQuery(document).on('viewpay:no-ads', function() {
+                log('Received viewpay:no-ads event, not showing button');
+                pendingSwgDialog = null;
+            });
 
             var observer = new MutationObserver(function(mutations) {
                 mutations.forEach(function(mutation) {

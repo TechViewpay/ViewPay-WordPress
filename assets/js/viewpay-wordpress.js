@@ -58,6 +58,9 @@
     function VPexistAds(){
         debugLog('Publicité disponible, affichage du bouton et du séparateur');
 
+        // Marquer globalement que les pubs sont disponibles (utilisé par TSA)
+        window.viewpayAdsAvailable = true;
+
         // Show button - utiliser setProperty pour ne pas écraser les styles inline existants
         $('#viewpay-button').each(function() {
             this.style.setProperty('display', 'inline', 'important');
@@ -84,11 +87,21 @@
 
         // For TSA Algérie integration
         $('.viewpay-tsa-container').css('display', 'block').attr('style', 'display: block !important');
+
+        // Émettre un event pour les intégrations qui attendent (TSA)
+        $(document).trigger('viewpay:ads-available');
     }
 
     function VPnoAds(){
         debugLog('Aucune publicité disponible, masquage du bouton et du séparateur');
+
+        // Marquer globalement que les pubs ne sont pas disponibles (utilisé par TSA)
+        window.viewpayAdsAvailable = false;
+
         hideViewPayButton();
+
+        // Émettre un event pour les intégrations qui attendent (TSA)
+        $(document).trigger('viewpay:no-ads');
     }
 
     function hideViewPayButton() {
@@ -101,6 +114,7 @@
         $('.viewpay-swg-container').hide();
         $('.viewpay-rrm-container').hide();
         $('.viewpay-tsa-container').hide();
+        $('#viewpay-swg-attachment').hide(); // TSA: bouton attaché au modal SwG
     }
 
     function VPloadAds(){
