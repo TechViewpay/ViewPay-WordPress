@@ -206,10 +206,11 @@ class ViewPay_TSA_Integration {
                         didHide = true;
                     }
 
-                    // Réactiver le scroll (SwG le désactive via overflow:hidden)
+                    // Réactiver le scroll (SwG le désactive via overflow:hidden et ajoute padding-bottom)
                     if (didHide) {
                         document.body.style.setProperty('overflow', 'auto', 'important');
                         document.documentElement.style.setProperty('overflow', 'auto', 'important');
+                        document.documentElement.style.setProperty('padding-bottom', '0', 'important');
 
                         // Log une seule fois
                         if (!swgHidden) {
