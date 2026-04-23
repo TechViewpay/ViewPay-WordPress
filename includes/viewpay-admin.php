@@ -246,6 +246,11 @@ function viewpay_wordpress_paywall_type_render() {
             'detected' => class_exists('SwpmMembershipLevel') || class_exists('SwpmProtectContent'),
             'description' => ''
         ),
+        'ihc' => array(
+            'label' => 'Indeed Membership Pro',
+            'detected' => defined('IHC_PLUGIN_FOLDER') || class_exists('Indeed_Db') || function_exists('ihc_user_subscription_level'),
+            'description' => ''
+        ),
         'wpmem' => array(
             'label' => 'WP-Members',
             'detected' => function_exists('wpmem_is_blocked'),

@@ -3,7 +3,7 @@
  * Plugin Name: ViewPay WordPress
  * Plugin URI: https://viewpay.tv/
  * Description: Intègre la solution ViewPay dans le paywall WordPress de votre choix.
- * Version: 1.6.7
+ * Version: 1.7.0
  * Author: ViewPay
  * Author URI: https://viewpay.tv/
  * Text Domain: viewpay-wordpress
@@ -16,7 +16,7 @@ if (!defined('WPINC')) {
 }
 
 // Définir les constantes
-define('VIEWPAY_WORDPRESS_VERSION', '1.6.7');
+define('VIEWPAY_WORDPRESS_VERSION', '1.7.0');
 define('VIEWPAY_WORDPRESS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIEWPAY_WORDPRESS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -76,6 +76,7 @@ function viewpay_wordpress_is_paywall_active($paywall_type) {
         'pmpro' => function_exists('pmpro_has_membership_access'),
         'rcp' => class_exists('RCP_Member') || class_exists('RCP_Requirements_Check'),
         'swpm' => class_exists('SwpmMembershipLevel') || class_exists('SwpmProtectContent'),
+        'ihc' => defined('IHC_PLUGIN_FOLDER') || class_exists('Indeed_Db') || function_exists('ihc_user_subscription_level'),
         'wpmem' => function_exists('wpmem_is_blocked'),
         'rua' => class_exists('RUA_App'),
         'um' => class_exists('UM'),
@@ -91,7 +92,7 @@ function viewpay_wordpress_is_paywall_active($paywall_type) {
 
 // Vérifier si un plugin compatible est actif (mode auto)
 function viewpay_wordpress_is_compatible_plugin_active() {
-    $paywall_types = array('pms', 'pmpro', 'rcp', 'swpm', 'wpmem', 'rua', 'um');
+    $paywall_types = array('pms', 'pmpro', 'rcp', 'swpm', 'ihc', 'wpmem', 'rua', 'um');
 
     foreach ($paywall_types as $type) {
         if (viewpay_wordpress_is_paywall_active($type)) {
@@ -113,7 +114,7 @@ function viewpay_wordpress_validate_options($input) {
     $output['site_id'] = sanitize_text_field($input['site_id']);
 
     // Type de paywall
-    $allowed_paywalls = array('pms', 'pmpro', 'rcp', 'swpm', 'wpmem', 'rua', 'um', 'swg', 'rrm', 'tsa', 'pymag', 'custom');
+    $allowed_paywalls = array('pms', 'pmpro', 'rcp', 'swpm', 'ihc', 'wpmem', 'rua', 'um', 'swg', 'rrm', 'tsa', 'pymag', 'custom');
     if (isset($input['paywall_type']) && in_array($input['paywall_type'], $allowed_paywalls)) {
         $output['paywall_type'] = $input['paywall_type'];
     } else {

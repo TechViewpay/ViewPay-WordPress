@@ -1,6 +1,6 @@
 # ViewPay WordPress
 
-**Version 1.3.1**
+**Version 1.7.0**
 
 Ce plugin intègre la solution ViewPay dans les principaux plugins de paywall WordPress, permettant aux visiteurs de débloquer du contenu premium en regardant une publicité.
 
@@ -10,23 +10,25 @@ ViewPay WordPress est un plugin qui s'intègre avec les principaux systèmes de 
 
 ### Plugins de paywall compatibles
 
-- Paid Memberships Pro (PMPro)
 - Paid Member Subscriptions (PMS - Cozmoslabs)
+- Paid Memberships Pro (PMPro)
 - Restrict Content Pro (RCP)
 - Simple Membership (SWPM)
-- PyMag (solution custom Pyrénées Magazine)
-
-### Plugins envisagés pour les versions futures
-
+- Indeed Membership Pro (IHC)
 - WP-Members
 - Restrict User Access (RUA)
 - Ultimate Member (UM)
+- Subscribe with Google (SwG) — plugin standalone
+- Reader Revenue Manager (Site Kit by Google)
+- TSA Algérie (intégration SwG custom)
+- PyMag (intégration custom Pyrénées Magazine)
+- Paywall personnalisé (sélecteur CSS configurable)
 
 ## Installation
 
-1. Téléchargez le plugin dans le répertoire `/wp-content/plugins/`
-2. Activez le plugin via le menu 'Extensions' dans WordPress
-3. Accédez à Réglages > ViewPay WordPress pour configurer le plugin
+1. Téléchargez la dernière archive `viewpay-wordpress-<version>.zip` depuis la page [Releases GitHub](https://github.com/TechViewpay/ViewPay-WordPress/releases).
+2. Dans l'admin WordPress, allez dans Extensions > Ajouter > Téléverser une extension, puis sélectionnez le zip et activez-le.
+3. Accédez à Réglages > ViewPay WordPress pour configurer le plugin.
 
 ## Configuration
 

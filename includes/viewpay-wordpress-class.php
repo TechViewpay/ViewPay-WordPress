@@ -98,6 +98,14 @@ class ViewPay_WordPress {
                 }
                 break;
 
+            case 'ihc':
+                if (defined('IHC_PLUGIN_FOLDER') || class_exists('Indeed_Db') || function_exists('ihc_user_subscription_level')) {
+                    require_once $integration_dir . 'class-viewpay-ihc-integration.php';
+                    $this->integration = new ViewPay_IHC_Integration($this);
+                    $this->debug_log("IHC integration loaded");
+                }
+                break;
+
             case 'wpmem':
                 if (function_exists('wpmem_is_blocked')) {
                     add_filter('wpmem_restricted_msg', array($this, 'add_viewpay_button_simple'), 10, 1);
@@ -172,6 +180,9 @@ class ViewPay_WordPress {
         }
         if (class_exists('SwpmMembershipLevel') || class_exists('SwpmProtectContent')) {
             return 'swpm';
+        }
+        if (defined('IHC_PLUGIN_FOLDER') || class_exists('Indeed_Db') || function_exists('ihc_user_subscription_level')) {
+            return 'ihc';
         }
         if (function_exists('wpmem_is_blocked')) {
             return 'wpmem';
