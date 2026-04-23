@@ -248,7 +248,7 @@ function viewpay_wordpress_paywall_type_render() {
         ),
         'ihc' => array(
             'label' => 'Indeed Membership Pro',
-            'detected' => defined('IHC_PLUGIN_FOLDER') || class_exists('Indeed_Db') || function_exists('ihc_user_subscription_level'),
+            'detected' => viewpay_wordpress_detect_ihc(),
             'description' => ''
         ),
         'wpmem' => array(

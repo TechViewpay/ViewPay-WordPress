@@ -3,7 +3,7 @@
  * Plugin Name: ViewPay WordPress
  * Plugin URI: https://viewpay.tv/
  * Description: Intègre la solution ViewPay dans le paywall WordPress de votre choix.
- * Version: 1.7.0
+ * Version: 1.7.1
  * Author: ViewPay
  * Author URI: https://viewpay.tv/
  * Text Domain: viewpay-wordpress
@@ -16,7 +16,7 @@ if (!defined('WPINC')) {
 }
 
 // Définir les constantes
-define('VIEWPAY_WORDPRESS_VERSION', '1.7.0');
+define('VIEWPAY_WORDPRESS_VERSION', '1.7.1');
 define('VIEWPAY_WORDPRESS_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('VIEWPAY_WORDPRESS_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -65,6 +65,34 @@ function viewpay_wordpress_init() {
 add_action('plugins_loaded', 'viewpay_wordpress_init');
 
 /**
+ * Détecte Indeed Membership Pro (IHC) via plusieurs signaux
+ * Certaines versions/forks du plugin renomment les symboles ou retardent leur chargement,
+ * on combine donc constantes, classes, fonctions et liste des plugins actifs.
+ *
+ * @return bool True si IHC est détecté
+ */
+function viewpay_wordpress_detect_ihc() {
+    if (defined('IHC_PLUGIN_FOLDER') || defined('IHC_PATH') || defined('IHC_VERSION')) {
+        return true;
+    }
+    if (class_exists('Indeed_Db') || class_exists('Ihc_Db') || class_exists('Indeed_Data_Manager')) {
+        return true;
+    }
+    if (function_exists('ihc_user_subscription_level')
+        || function_exists('ihc_is_admin')
+        || function_exists('ihc_return_levels_by_user_id')) {
+        return true;
+    }
+    $active_plugins = (array) get_option('active_plugins', array());
+    foreach ($active_plugins as $plugin_path) {
+        if (strpos($plugin_path, 'indeed-membership-pro') !== false) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
  * Vérifie si un type de paywall spécifique est actif
  *
  * @param string $paywall_type Le type de paywall à vérifier
@@ -76,7 +104,7 @@ function viewpay_wordpress_is_paywall_active($paywall_type) {
         'pmpro' => function_exists('pmpro_has_membership_access'),
         'rcp' => class_exists('RCP_Member') || class_exists('RCP_Requirements_Check'),
         'swpm' => class_exists('SwpmMembershipLevel') || class_exists('SwpmProtectContent'),
-        'ihc' => defined('IHC_PLUGIN_FOLDER') || class_exists('Indeed_Db') || function_exists('ihc_user_subscription_level'),
+        'ihc' => viewpay_wordpress_detect_ihc(),
         'wpmem' => function_exists('wpmem_is_blocked'),
         'rua' => class_exists('RUA_App'),
         'um' => class_exists('UM'),
