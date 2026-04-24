@@ -13,22 +13,20 @@ if (!defined('ABSPATH')) {
 /**
  * Classe d'intégration de ViewPay avec Indeed Membership Pro
  *
- * Contrairement à PMPro, SWPM ou RCP, IHC (slug `indeed-membership-pro`, préfixe
- * CSS `ihc-`) est un plugin payant qui n'est pas publié sur wordpress.org.
- * L'inspection de la version communautaire v2.6 a confirmé l'absence de filtre
- * public stable équivalent à `pmpro_has_membership_access_filter` ou
- * `swpm_member_can_access_content` : IHC construit son « locker » directement
- * via `the_content` (priorité par défaut, callback dont le nom varie selon les
- * versions) en s'appuyant sur une post meta de remplacement.
+ * IHC (slug `indeed-membership-pro`, préfixe CSS `ihc-`) existe en deux éditions
+ * au code très différent : la version communautaire (v2.x) et « Indeed Ultimate
+ * Membership Pro » (v9.x), cette dernière étant payante et non publiée sur
+ * wordpress.org. On couvre les deux via trois mécanismes complémentaires :
  *
- * On reproduit donc la stratégie PMPro/SWPM mais en s'accrochant uniquement à
- * `the_content` :
- *  - priorité 998 : injection du bouton ViewPay dans le wrapper `.ihc-locker-wrap`
- *    (repère HTML stable observé en production chez lecorrespondant.net).
- *  - priorité 999 : restitution du contenu original quand le cookie ViewPay est
- *    valide, en retirant temporairement toute callback dont le nom commence par
- *    `ihc_` de la chaîne `the_content` (on ignore volontairement le nom exact
- *    pour rester compatible entre versions d'IHC).
+ *  - `the_content` priorité 998 : injection du bouton ViewPay dans le wrapper
+ *    `.ihc-locker-wrap` (repère HTML stable observé en production).
+ *  - `the_content` priorité 999 : restitution du contenu original quand le
+ *    cookie ViewPay est valide, en retirant temporairement toute callback IHC
+ *    (fonction préfixée `ihc_` ou méthode d'une classe dont le nom contient
+ *    `ihc`/`indeed`) pour rester compatible entre versions.
+ *  - Hook direct sur les filtres d'autorisation IHC (`ihc_user_has_access` et
+ *    variantes) : défense en profondeur, laisse IHC lui-même décider de ne pas
+ *    masquer quand ViewPay a débloqué le post. Filtre absent = silencieux.
  */
 class ViewPay_IHC_Integration {
 
@@ -57,6 +55,52 @@ class ViewPay_IHC_Integration {
 
         // Restitution du contenu original quand le post est débloqué via ViewPay.
         add_filter('the_content', array($this, 'ensure_content_access'), 999);
+
+        // Hook direct sur les filtres d'autorisation IHC (plus fiable que de
+        // démonter `the_content` a posteriori). Les noms varient selon les
+        // versions / forks ("Indeed Membership Pro" vs "Indeed Ultimate
+        // Membership Pro"), on s'accroche aux variantes connues. Un filtre
+        // inexistant est silencieusement ignoré par WordPress.
+        $access_filters = array(
+            'ihc_user_has_access',
+            'ihc_check_access',
+            'ihc_access_check',
+            'indeed_user_has_access',
+            'indeed_membership_has_access',
+        );
+        foreach ($access_filters as $filter_name) {
+            add_filter($filter_name, array($this, 'grant_access_if_unlocked'), 99, 3);
+        }
+    }
+
+    /**
+     * Force l'accès autorisé quand ViewPay a débloqué le post courant.
+     *
+     * Branché sur plusieurs filtres IHC potentiels (noms variables selon
+     * versions). Signature volontairement tolérante : les filtres IHC passent
+     * selon les cas `($has_access)`, `($has_access, $user_id)` ou
+     * `($has_access, $user_id, $post_id)`. On lit le post_id quand il est
+     * fourni, sinon on retombe sur `get_the_ID()`.
+     *
+     * @param mixed    $has_access Valeur courante (true/false)
+     * @param int|null $user_id    Utilisateur cible (optionnel)
+     * @param int|null $post_id    Post cible (optionnel)
+     * @return mixed true si ViewPay a débloqué, valeur originale sinon
+     */
+    public function grant_access_if_unlocked($has_access, $user_id = null, $post_id = null) {
+        if (empty($post_id)) {
+            $post_id = get_the_ID();
+        }
+
+        if (!$post_id) {
+            return $has_access;
+        }
+
+        if ($this->main->is_post_unlocked($post_id)) {
+            return true;
+        }
+
+        return $has_access;
     }
 
     /**
@@ -131,12 +175,28 @@ class ViewPay_IHC_Integration {
         error_log('ViewPay: Force IHC content display for post ' . $post->ID);
 
         // Sauvegarde + retrait temporaire des callbacks IHC sur `the_content`.
+        // On couvre deux formes :
+        //  - fonctions globales préfixées `ihc_` (IHC communautaire)
+        //  - méthodes de classe dont le nom de classe contient `ihc`/`indeed`
+        //    (IHC « Ultimate » v9.x où les hooks sont passés à des instances).
         $removed_callbacks = array();
         if (isset($wp_filter['the_content']) && !empty($wp_filter['the_content']->callbacks)) {
             foreach ($wp_filter['the_content']->callbacks as $priority => $callbacks) {
                 foreach ($callbacks as $key => $callback) {
                     $fn = $callback['function'];
+
+                    $is_ihc_callback = false;
                     if (is_string($fn) && strpos($fn, 'ihc_') === 0) {
+                        $is_ihc_callback = true;
+                    } elseif (is_array($fn) && isset($fn[0])) {
+                        $class_name = is_object($fn[0]) ? get_class($fn[0]) : (is_string($fn[0]) ? $fn[0] : '');
+                        $class_lc = strtolower($class_name);
+                        if ($class_lc !== '' && (strpos($class_lc, 'ihc') !== false || strpos($class_lc, 'indeed') !== false)) {
+                            $is_ihc_callback = true;
+                        }
+                    }
+
+                    if ($is_ihc_callback) {
                         $removed_callbacks[] = array(
                             'function' => $fn,
                             'priority' => $priority,
