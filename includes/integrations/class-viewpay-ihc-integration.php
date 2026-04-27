@@ -24,9 +24,12 @@ if (!defined('ABSPATH')) {
  *    cookie ViewPay est valide, en retirant temporairement toute callback IHC
  *    (fonction préfixée `ihc_` ou méthode d'une classe dont le nom contient
  *    `ihc`/`indeed`) pour rester compatible entre versions.
- *  - Hook direct sur les filtres d'autorisation IHC (`ihc_user_has_access` et
- *    variantes) : défense en profondeur, laisse IHC lui-même décider de ne pas
- *    masquer quand ViewPay a débloqué le post. Filtre absent = silencieux.
+ *  - Hook direct sur deux filtres extensibles d'IHC Ultimate (noms vérifiés
+ *    contre le code source v12.x) : `ihc_filter_restriction` (court-circuite
+ *    la restriction dans `public/init.php`) et `filter_on_ihc_test_if_must_block`
+ *    (force `$block = 0` dans `public/functions.php`). Quand ViewPay a
+ *    débloqué un post, IHC s'écarte de lui-même — plus besoin de bricoler
+ *    `the_content`.
  */
 class ViewPay_IHC_Integration {
 
@@ -57,50 +60,55 @@ class ViewPay_IHC_Integration {
         add_filter('the_content', array($this, 'ensure_content_access'), 999);
 
         // Hook direct sur les filtres d'autorisation IHC (plus fiable que de
-        // démonter `the_content` a posteriori). Les noms varient selon les
-        // versions / forks ("Indeed Membership Pro" vs "Indeed Ultimate
-        // Membership Pro"), on s'accroche aux variantes connues. Un filtre
-        // inexistant est silencieusement ignoré par WordPress.
-        $access_filters = array(
-            'ihc_user_has_access',
-            'ihc_check_access',
-            'ihc_access_check',
-            'indeed_user_has_access',
-            'indeed_membership_has_access',
-        );
-        foreach ($access_filters as $filter_name) {
-            add_filter($filter_name, array($this, 'grant_access_if_unlocked'), 99, 3);
-        }
+        // démonter `the_content` a posteriori). Noms et signatures vérifiés
+        // contre le code source IHC Ultimate (v12.x, public/init.php et
+        // public/functions.php) — couvre v9.x à v12.x.
+        //
+        // `ihc_filter_restriction` : retourner false court-circuite `return;`
+        // dans init.php → IHC ne pose aucune restriction, le contenu original
+        // s'affiche tel quel.
+        add_filter('ihc_filter_restriction', array($this, 'disable_restriction_if_unlocked'), 99, 2);
+
+        // `filter_on_ihc_test_if_must_block` : retourner 0 (SHOW) quand
+        // ViewPay a débloqué. Filtre appelé dans plusieurs branches de
+        // ihc_test_if_must_block().
+        add_filter('filter_on_ihc_test_if_must_block', array($this, 'force_show_if_unlocked'), 99, 6);
     }
 
     /**
-     * Force l'accès autorisé quand ViewPay a débloqué le post courant.
+     * Filtre `ihc_filter_restriction` : désactive la restriction IHC sur un
+     * post déjà débloqué par ViewPay (signature à 2 arguments validée contre
+     * `public/init.php`).
      *
-     * Branché sur plusieurs filtres IHC potentiels (noms variables selon
-     * versions). Signature volontairement tolérante : les filtres IHC passent
-     * selon les cas `($has_access)`, `($has_access, $user_id)` ou
-     * `($has_access, $user_id, $post_id)`. On lit le post_id quand il est
-     * fourni, sinon on retombe sur `get_the_ID()`.
-     *
-     * @param mixed    $has_access Valeur courante (true/false)
-     * @param int|null $user_id    Utilisateur cible (optionnel)
-     * @param int|null $post_id    Post cible (optionnel)
-     * @return mixed true si ViewPay a débloqué, valeur originale sinon
+     * @param mixed $restriction_on Valeur courante (truthy = restriction active)
+     * @param int   $post_id        Post évalué par IHC
+     * @return mixed false si ViewPay a débloqué, valeur originale sinon
      */
-    public function grant_access_if_unlocked($has_access, $user_id = null, $post_id = null) {
-        if (empty($post_id)) {
-            $post_id = get_the_ID();
+    public function disable_restriction_if_unlocked($restriction_on, $post_id) {
+        if (!empty($post_id) && $this->main->is_post_unlocked($post_id)) {
+            return false;
         }
+        return $restriction_on;
+    }
 
-        if (!$post_id) {
-            return $has_access;
+    /**
+     * Filtre `filter_on_ihc_test_if_must_block` : force `$block = 0` (SHOW)
+     * quand ViewPay a débloqué (signature à 6 arguments validée contre
+     * `public/functions.php`).
+     *
+     * @param int   $block          0 = SHOW, 1 = BLOCK (sémantique IHC)
+     * @param mixed $block_or_show  Mode d'évaluation IHC (non utilisé)
+     * @param mixed $user_levels    Niveaux de l'utilisateur (non utilisé)
+     * @param mixed $target_levels  Niveaux requis par le post (non utilisé)
+     * @param int   $post_id        Post évalué
+     * @param mixed $used_location  Emplacement (non utilisé)
+     * @return int 0 si ViewPay a débloqué, valeur originale sinon
+     */
+    public function force_show_if_unlocked($block, $block_or_show, $user_levels, $target_levels, $post_id, $used_location) {
+        if (!empty($post_id) && $this->main->is_post_unlocked($post_id)) {
+            return 0;
         }
-
-        if ($this->main->is_post_unlocked($post_id)) {
-            return true;
-        }
-
-        return $has_access;
+        return $block;
     }
 
     /**
